@@ -3,7 +3,7 @@ import json
 from pathlib import Path
 
 # タイトル
-st.title("High & Low Game")
+st.title("High & Low Game2")
 
 # JSONファイルを読み込む
 json_path = Path(__file__).parent.parent / "sample_data" / "highlow.json"
