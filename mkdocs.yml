@@ -3,5 +3,5 @@ site_url: https://ToaruMK.github.io/streamlit-practice/
 theme:
  name: mkdocs
 nav:
- -Home: index.mkdocs
+ - Home: index.md
 repo_url: https://github.com/ToaruMK/streamlit-practice
