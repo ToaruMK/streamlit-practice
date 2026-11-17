@@ -1,0 +1,7 @@
+site_name: making game 1
+site_url: https://ToaruMK.github.io/streamlit-practice/
+theme:
+ name: mkdocs
+nav:
+ -Home: index.mkdocs
+repo_url: https://github.com/ToaruMK/streamlit-practice
