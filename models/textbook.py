@@ -1,0 +1,97 @@
+import json
+import os
+import tempfile
+from pathlib import Path
+from threading import Lock
+
+
+DATA_FILE = Path(__file__).parent.parent / "sample_data" / "textbooks.json"
+_write_lock = Lock()
+
+
+def _normalize_record(record):
+    if hasattr(record, "__dict__"):
+        record = record.__dict__
+    if not isinstance(record, dict):
+        raise TypeError("教科書情報は辞書またはオブジェクトで指定してください")
+
+    return {
+        "lecture_name": str(record.get("lecture_name", record.get("講義名", ""))).strip(),
+        "professor_name": str(record.get("professor_name", record.get("教授名", ""))).strip(),
+        "required_textbook": str(
+            record.get("required_textbook", record.get("指定教科書", ""))
+        ).strip(),
+        "reference_book": str(
+            record.get("reference_book", record.get("市販参考書", ""))
+        ).strip(),
+    }
+
+
+def load_textbooks(path=None):
+    """JSONファイルから教科書情報を読み込む。ファイルがない場合は空リストを返す。"""
+    data_path = Path(path) if path is not None else DATA_FILE
+    if not data_path.exists():
+        return []
+
+    with data_path.open("r", encoding="utf-8") as file:
+        data = json.load(file)
+
+    if not isinstance(data, list):
+        raise ValueError("教科書データはJSON配列で保存してください")
+    return [_normalize_record(record) for record in data]
+
+
+def save_textbooks(records, path=None):
+    """教科書情報をアトミックにJSONへ保存する。"""
+    data_path = Path(path) if path is not None else DATA_FILE
+    data_path.parent.mkdir(parents=True, exist_ok=True)
+    normalized = [_normalize_record(record) for record in records]
+
+    with _write_lock:
+        fd, temp_name = tempfile.mkstemp(
+            dir=str(data_path.parent), prefix=".textbooks-", suffix=".json"
+        )
+        try:
+            with os.fdopen(fd, "w", encoding="utf-8") as file:
+                json.dump(normalized, file, ensure_ascii=False, indent=2)
+                file.write("\n")
+            os.replace(temp_name, data_path)
+        except Exception:
+            if os.path.exists(temp_name):
+                os.unlink(temp_name)
+            raise
+
+    return normalized
+
+
+def add_textbook(
+    lecture_name,
+    professor_name,
+    required_textbook,
+    reference_book="",
+    path=None,
+):
+    """教科書情報を検証して追加する。"""
+    record = _normalize_record(
+        {
+            "lecture_name": lecture_name,
+            "professor_name": professor_name,
+            "required_textbook": required_textbook,
+            "reference_book": reference_book,
+        }
+    )
+
+    required_fields = (
+        ("lecture_name", "講義名"),
+        ("professor_name", "教授名"),
+    )
+    missing = [label for key, label in required_fields if not record[key]]
+    if missing:
+        raise ValueError(f"{'・'.join(missing)}は必須です")
+    if not record["required_textbook"] and not record["reference_book"]:
+        raise ValueError("指定教科書または市販参考書のいずれかを入力してください")
+
+    records = load_textbooks(path)
+    records.append(record)
+    save_textbooks(records, path)
+    return record
