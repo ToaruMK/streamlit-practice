@@ -2,6 +2,9 @@
   {
     "id": "2395505e-1ce0-4679-abe6-1703358f7fd0",
     "creator_id": "c0294bce-0216-41eb-9dd6-d881a42ea91b",
+    "creator_ids": [
+      "c0294bce-0216-41eb-9dd6-d881a42ea91b"
+    ],
     "department": [
       "化学・生命"
     ],
@@ -29,6 +32,10 @@
   {
     "id": "c3b3ff2d-b4b0-4d55-b754-9bdffae516a7",
     "creator_id": "17e1430f-bdf1-4c3a-94ff-030633b6194a",
+    "creator_ids": [
+      "17e1430f-bdf1-4c3a-94ff-030633b6194a",
+      "b76787c0-e878-4e20-b7f5-c1b94c659297"
+    ],
     "department": [
       "化学・生命"
     ],
@@ -44,20 +51,42 @@
         {
           "voter_id": "17e1430f-bdf1-4c3a-94ff-030633b6194a",
           "value": 4
+        },
+        {
+          "voter_id": "b76787c0-e878-4e20-b7f5-c1b94c659297",
+          "value": 2
         }
       ],
       "frequency": [
         {
           "voter_id": "17e1430f-bdf1-4c3a-94ff-030633b6194a",
           "value": 2
+        },
+        {
+          "voter_id": "b76787c0-e878-4e20-b7f5-c1b94c659297",
+          "value": 5
         }
       ]
     },
-    "comments": []
+    "comments": [
+      {
+        "id": "5c5242d7-71b7-4b88-b02e-26df7010fa5e",
+        "text": "使える",
+        "likes": 1
+      },
+      {
+        "id": "6a0e7f40-205c-473b-a97c-3cb71e80e045",
+        "text": "まあまあ",
+        "likes": 0
+      }
+    ]
   },
   {
     "id": "f4effb88-ad55-4b28-87eb-913d23547c5d",
     "creator_id": "1069c493-be1e-45e7-a302-2fc1da09af53",
+    "creator_ids": [
+      "1069c493-be1e-45e7-a302-2fc1da09af53"
+    ],
     "department": [
       "化学・生命"
     ],
