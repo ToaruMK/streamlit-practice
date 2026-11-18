@@ -10,6 +10,16 @@ DATA_FILE = Path(__file__).parent.parent / "sample_data" / "textbooks.json"
 _write_lock = Lock()
 
 
+def _normalize_choices(value):
+    if isinstance(value, str):
+        values = [value]
+    elif isinstance(value, (list, tuple, set)):
+        values = value
+    else:
+        values = []
+    return list(dict.fromkeys(str(item).strip() for item in values if str(item).strip()))
+
+
 def _normalize_record(record):
     if hasattr(record, "__dict__"):
         record = record.__dict__
@@ -18,8 +28,10 @@ def _normalize_record(record):
 
     normalized = {
         "id": str(record.get("id", "")).strip(),
-        "department": str(record.get("department", record.get("学科", ""))).strip(),
-        "grade": str(record.get("grade", record.get("学年", ""))).strip(),
+        "department": _normalize_choices(
+            record.get("department", record.get("学科", ""))
+        ),
+        "grade": _normalize_choices(record.get("grade", record.get("学年", ""))),
         "lecture_name": str(record.get("lecture_name", record.get("講義名", ""))).strip(),
         "professor_name": str(record.get("professor_name", record.get("教授名", ""))).strip(),
         "required_textbook": str(
@@ -119,7 +131,8 @@ def add_textbook(
 
     required_fields = (
         ("department", "学科"),
-        ("lecture_name", "講義名"),
+        ("grade", "学年"),
+        ("lecture_name", "授業名"),
         ("professor_name", "教授名"),
         ("required_textbook", "指定教科書"),
     )

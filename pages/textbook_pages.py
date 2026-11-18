@@ -51,8 +51,8 @@ tab_list, tab_add = st.tabs(["教科書一覧", "教科書を追加"])
 with tab_add:
     st.subheader("新しい情報を追加")
     with st.form("textbook_form", clear_on_submit=True):
-        department = st.selectbox("学科（必須）", DEPARTMENTS)
-        grade = st.selectbox("学年", GRADES)
+        department = st.multiselect("学科（必須・複数選択可）", DEPARTMENTS)
+        grade = st.multiselect("学年（必須・複数選択可）", GRADES)
         lecture_name = st.text_input(
             "授業名（必須）",
             placeholder="例：線形代数学",
@@ -98,19 +98,13 @@ with tab_list:
         textbooks = []
         st.error(f"教科書データを読み込めませんでした：{error}")
 
-    departments = sorted(
-        {item["department"] or "学科未登録" for item in textbooks}
+    selected_departments = st.multiselect(
+        "学科で絞り込む（複数選択可）",
+        DEPARTMENTS,
     )
-    selected_department = st.selectbox(
-        "学科で絞り込む",
-        ["すべての学科"] + departments,
-    )
-    grades = sorted(
-        {item["grade"] or "学年未登録" for item in textbooks}
-    )
-    selected_grade = st.selectbox(
-        "学年で絞り込む",
-        ["すべての学年"] + grades,
+    selected_grades = st.multiselect(
+        "学年で絞り込む（複数選択可）",
+        GRADES,
     )
 
     search = st.text_input(
@@ -119,32 +113,35 @@ with tab_list:
     )
 
     if textbooks:
-        filtered = [
-            item
-            for item in textbooks
-            if selected_department == "すべての学科"
-            or (item["department"] or "学科未登録") == selected_department
-        ]
-        if selected_grade != "すべての学年":
-            filtered = [
-                item
-                for item in filtered
-                if (item["grade"] or "学年未登録") == selected_grade
-            ]
+        filtered = []
+        for item in textbooks:
+            department_matches = bool(
+                selected_departments
+                and set(selected_departments).intersection(item["department"])
+            )
+            grade_matches = bool(
+                selected_grades and set(selected_grades).intersection(item["grade"])
+            )
+            if (
+                (not selected_departments and not selected_grades)
+                or department_matches
+                or grade_matches
+            ):
+                filtered.append(item)
         keyword = search.strip().lower()
         if keyword:
             filtered = [
                 item
                 for item in filtered
                 if any(
-                    keyword in str(item[key]).lower()
-                    for key in (
-                        "department",
-                        "grade",
-                        "lecture_name",
-                        "professor_name",
-                        "required_textbook",
-                        "reference_book",
+                    keyword in value.lower()
+                    for value in (
+                        *item["department"],
+                        *item["grade"],
+                        item["lecture_name"],
+                        item["professor_name"],
+                        item["required_textbook"],
+                        item["reference_book"],
                     )
                 )
             ]
@@ -152,8 +149,8 @@ with tab_list:
         st.caption(f"{len(filtered)} 件")
         if filtered:
             for item in filtered:
-                department_label = item["department"] or "学科未登録"
-                grade_label = item["grade"] or "学年未登録"
+                department_label = "・".join(item["department"]) or "学科未登録"
+                grade_label = "・".join(item["grade"]) or "学年未登録"
                 title = (
                     f"{department_label}・{grade_label} | {item['lecture_name']} "
                     f"- {item['professor_name']}教授"
