@@ -1,27 +1,22 @@
 import json
 import importlib.util
-import sys
 from pathlib import Path
 
 import streamlit as st
 
 PROJECT_ROOT = Path(__file__).parent.parent
-if str(PROJECT_ROOT) not in sys.path:
-    sys.path.insert(0, str(PROJECT_ROOT))
-
-try:
-    from models.textbook import add_comment, add_textbook, like_comment, load_textbooks
-except ModuleNotFoundError:
-    module_path = PROJECT_ROOT / "models" / "textbook.py"
-    spec = importlib.util.spec_from_file_location("textbook_model", module_path)
-    if spec is None or spec.loader is None:
-        raise ImportError(f"教科書モデルを読み込めませんでした：{module_path}")
-    textbook_model = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(textbook_model)
-    add_comment = textbook_model.add_comment
-    add_textbook = textbook_model.add_textbook
-    like_comment = textbook_model.like_comment
-    load_textbooks = textbook_model.load_textbooks
+module_path = PROJECT_ROOT / "models" / "textbook.py"
+spec = importlib.util.spec_from_file_location(
+    "_streamlit_practice_textbook_model", module_path
+)
+if spec is None or spec.loader is None:
+    raise ImportError(f"教科書モデルを読み込めませんでした：{module_path}")
+textbook_model = importlib.util.module_from_spec(spec)
+spec.loader.exec_module(textbook_model)
+add_comment = textbook_model.add_comment
+add_textbook = textbook_model.add_textbook
+like_comment = textbook_model.like_comment
+load_textbooks = textbook_model.load_textbooks
 
 
 st.set_page_config(
