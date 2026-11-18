@@ -20,6 +20,7 @@ like_comment = textbook_model.like_comment
 load_textbooks = textbook_model.load_textbooks
 rate_textbook = textbook_model.rate_textbook
 rating_summary = textbook_model.rating_summary
+update_textbook = textbook_model.update_textbook
 
 DEPARTMENTS = [
     "教育",
@@ -193,6 +194,64 @@ with tab_list:
                 with st.expander(title, expanded=False):
                     st.markdown(f"**学科：** {department_label}")
                     st.markdown(f"**学年：** {grade_label}")
+
+                    if item["creator_id"] == voter_id:
+                        with st.form(key=f"edit-form-{item['id']}"):
+                            st.markdown("**登録情報を編集**")
+                            edited_departments = st.multiselect(
+                                "学科",
+                                DEPARTMENTS,
+                                default=[
+                                    department
+                                    for department in item["department"]
+                                    if department in DEPARTMENTS
+                                ],
+                                key=f"edit-department-{item['id']}",
+                            )
+                            edited_grades = st.multiselect(
+                                "学年",
+                                GRADES,
+                                default=[
+                                    grade for grade in item["grade"] if grade in GRADES
+                                ],
+                                key=f"edit-grade-{item['id']}",
+                            )
+                            edited_lecture_name = st.text_input(
+                                "授業名",
+                                value=item["lecture_name"],
+                                key=f"edit-lecture-{item['id']}",
+                            )
+                            edited_professor_name = st.text_input(
+                                "教授名",
+                                value=item["professor_name"],
+                                key=f"edit-professor-{item['id']}",
+                            )
+                            edited_required_textbook = st.text_input(
+                                "指定教科書名",
+                                value=item["required_textbook"],
+                                key=f"edit-required-book-{item['id']}",
+                            )
+                            edited_reference_book = st.text_input(
+                                "市販参考書",
+                                value=item["reference_book"],
+                                key=f"edit-reference-book-{item['id']}",
+                            )
+                            if st.form_submit_button("登録情報を更新"):
+                                try:
+                                    update_textbook(
+                                        item["id"],
+                                        voter_id,
+                                        edited_lecture_name,
+                                        edited_professor_name,
+                                        edited_required_textbook,
+                                        edited_reference_book,
+                                        department=edited_departments,
+                                        grade=edited_grades,
+                                    )
+                                    st.success("登録情報を更新しました")
+                                    st.rerun()
+                                except (ValueError, OSError) as error:
+                                    st.error(str(error))
 
                     rating_col1, rating_col2 = st.columns(2)
                     for column, metric, label in (

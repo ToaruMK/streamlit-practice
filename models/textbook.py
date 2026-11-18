@@ -51,8 +51,20 @@ def _normalize_record(record):
     if not isinstance(record, dict):
         raise TypeError("教科書情報は辞書またはオブジェクトで指定してください")
 
+    ratings = _normalize_ratings(record.get("ratings", {}))
+    creator_id = str(record.get("creator_id", "")).strip()
+    if not creator_id:
+        voter_ids = {
+            vote["voter_id"]
+            for votes in ratings.values()
+            for vote in votes
+        }
+        if len(voter_ids) == 1:
+            creator_id = voter_ids.pop()
+
     normalized = {
         "id": str(record.get("id", "")).strip(),
+        "creator_id": creator_id,
         "department": _normalize_choices(
             record.get("department", record.get("学科", ""))
         ),
@@ -65,7 +77,7 @@ def _normalize_record(record):
         "reference_book": str(
             record.get("reference_book", record.get("市販参考書", ""))
         ).strip(),
-        "ratings": _normalize_ratings(record.get("ratings", {})),
+        "ratings": ratings,
         "comments": [],
     }
     if not normalized["id"]:
@@ -148,6 +160,7 @@ def add_textbook(
     record = _normalize_record(
         {
             "id": str(uuid.uuid4()),
+            "creator_id": str(voter_id or "").strip(),
             "department": department,
             "grade": grade,
             "lecture_name": lecture_name,
@@ -186,6 +199,56 @@ def add_textbook(
     records.append(record)
     save_textbooks(records, path)
     return record
+
+
+def update_textbook(
+    textbook_id,
+    creator_id,
+    lecture_name,
+    professor_name,
+    required_textbook,
+    reference_book="",
+    department=None,
+    grade=None,
+    path=None,
+):
+    """登録者本人の教科書情報を更新する。"""
+    editor_id = str(creator_id).strip()
+    if not editor_id:
+        raise ValueError("登録者を確認できません")
+
+    records = load_textbooks(path)
+    for record in records:
+        if record["id"] != textbook_id:
+            continue
+        if record["creator_id"] != editor_id:
+            raise PermissionError("この教科書情報を編集できるのは登録者本人だけです")
+
+        updated_fields = {
+            "department": _normalize_choices(
+                record["department"] if department is None else department
+            ),
+            "grade": _normalize_choices(record["grade"] if grade is None else grade),
+            "lecture_name": str(lecture_name).strip(),
+            "professor_name": str(professor_name).strip(),
+            "required_textbook": str(required_textbook).strip(),
+            "reference_book": str(reference_book).strip(),
+        }
+        required_fields = (
+            ("department", "学科"),
+            ("grade", "学年"),
+            ("lecture_name", "授業名"),
+            ("professor_name", "教授名"),
+            ("required_textbook", "指定教科書"),
+        )
+        missing = [label for key, label in required_fields if not updated_fields[key]]
+        if missing:
+            raise ValueError(f"{'・'.join(missing)}は必須です")
+
+        record.update(updated_fields)
+        save_textbooks(records, path)
+        return record
+    raise ValueError("教科書が見つかりません")
 
 
 def _validate_rating(value):
