@@ -61,10 +61,14 @@ def _normalize_record(record):
         }
         if len(voter_ids) == 1:
             creator_id = voter_ids.pop()
+    creator_ids = _normalize_choices(record.get("creator_ids", []))
+    if creator_id and creator_id not in creator_ids:
+        creator_ids.append(creator_id)
 
     normalized = {
         "id": str(record.get("id", "")).strip(),
         "creator_id": creator_id,
+        "creator_ids": creator_ids,
         "department": _normalize_choices(
             record.get("department", record.get("学科", ""))
         ),
@@ -196,9 +200,53 @@ def add_textbook(
                 )
 
     records = load_textbooks(path)
+    matching_record = next(
+        (
+            existing
+            for existing in records
+            if existing["lecture_name"].casefold() == record["lecture_name"].casefold()
+            and existing["professor_name"].casefold()
+            == record["professor_name"].casefold()
+        ),
+        None,
+    )
+    if matching_record is not None:
+        _merge_choices(matching_record["department"], record["department"])
+        _merge_choices(matching_record["grade"], record["grade"])
+        matching_record["required_textbook"] = _merge_text(
+            matching_record["required_textbook"], record["required_textbook"]
+        )
+        matching_record["reference_book"] = _merge_text(
+            matching_record["reference_book"], record["reference_book"]
+        )
+        matching_record["creator_ids"] = _merge_choices(
+            matching_record["creator_ids"], record["creator_ids"]
+        )
+        for metric in ("clarity", "frequency"):
+            matching_record["ratings"][metric].extend(record["ratings"][metric])
+        matching_record["comments"].extend(record["comments"])
+        save_textbooks(records, path)
+        return matching_record
+
     records.append(record)
     save_textbooks(records, path)
     return record
+
+
+def _merge_choices(existing, incoming):
+    for value in incoming:
+        if value not in existing:
+            existing.append(value)
+    return existing
+
+
+def _merge_text(existing, incoming):
+    values = [value.strip() for value in existing.splitlines() if value.strip()]
+    for value in incoming.splitlines():
+        value = value.strip()
+        if value and value not in values:
+            values.append(value)
+    return "\n".join(values)
 
 
 def update_textbook(
@@ -221,7 +269,7 @@ def update_textbook(
     for record in records:
         if record["id"] != textbook_id:
             continue
-        if record["creator_id"] != editor_id:
+        if editor_id not in record["creator_ids"]:
             raise PermissionError("この教科書情報を編集できるのは登録者本人だけです")
 
         updated_fields = {

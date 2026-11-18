@@ -75,6 +75,9 @@ except (json.JSONDecodeError, OSError, ValueError) as error:
 professor_suggestions = sorted(
     {item["professor_name"] for item in textbooks if item["professor_name"]}
 )
+lecture_suggestions = sorted(
+    {item["lecture_name"] for item in textbooks if item["lecture_name"]}
+)
 required_book_suggestions = sorted(
     {item["required_textbook"] for item in textbooks if item["required_textbook"]}
 )
@@ -86,12 +89,16 @@ tab_list, tab_add = st.tabs(["教科書一覧", "教科書を追加"])
 
 with tab_add:
     st.subheader("新しい情報を追加")
+    st.caption("同じ授業名・教授名の登録がある場合は、既存情報に統合されます。")
     with st.form("textbook_form", clear_on_submit=True):
         department = st.multiselect("学科（必須・複数選択可）", DEPARTMENTS)
         grade = st.multiselect("学年（必須・複数選択可）", GRADES)
-        lecture_name = st.text_input(
+        lecture_name = st.selectbox(
             "授業名（必須）",
-            placeholder="例：線形代数学",
+            lecture_suggestions,
+            index=None,
+            accept_new_options=True,
+            placeholder="入力するか、過去の登録候補から選択",
         )
         professor_name = st.selectbox(
             "教授名（必須）",
@@ -137,7 +144,7 @@ with tab_add:
         if submitted:
             try:
                 add_textbook(
-                    lecture_name,
+                    lecture_name or "",
                     professor_name or "",
                     required_textbook or "",
                     reference_book or "",

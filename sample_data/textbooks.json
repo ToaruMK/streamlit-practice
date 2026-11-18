@@ -54,5 +54,34 @@
       ]
     },
     "comments": []
+  },
+  {
+    "id": "f4effb88-ad55-4b28-87eb-913d23547c5d",
+    "creator_id": "1069c493-be1e-45e7-a302-2fc1da09af53",
+    "department": [
+      "化学・生命"
+    ],
+    "grade": [
+      "1年"
+    ],
+    "lecture_name": "有機化学Ⅰ",
+    "professor_name": "児島長次郎",
+    "required_textbook": "アトキンス物理化学",
+    "reference_book": "",
+    "ratings": {
+      "clarity": [
+        {
+          "voter_id": "1069c493-be1e-45e7-a302-2fc1da09af53",
+          "value": 5
+        }
+      ],
+      "frequency": [
+        {
+          "voter_id": "1069c493-be1e-45e7-a302-2fc1da09af53",
+          "value": 4
+        }
+      ]
+    },
+    "comments": []
   }
 ]
