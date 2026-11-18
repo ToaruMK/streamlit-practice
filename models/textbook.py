@@ -1,6 +1,7 @@
 import json
 import os
 import tempfile
+import uuid
 from pathlib import Path
 from threading import Lock
 
@@ -15,7 +16,8 @@ def _normalize_record(record):
     if not isinstance(record, dict):
         raise TypeError("教科書情報は辞書またはオブジェクトで指定してください")
 
-    return {
+    normalized = {
+        "id": str(record.get("id", "")).strip(),
         "lecture_name": str(record.get("lecture_name", record.get("講義名", ""))).strip(),
         "professor_name": str(record.get("professor_name", record.get("教授名", ""))).strip(),
         "required_textbook": str(
@@ -24,7 +26,33 @@ def _normalize_record(record):
         "reference_book": str(
             record.get("reference_book", record.get("市販参考書", ""))
         ).strip(),
+        "comments": [],
     }
+    if not normalized["id"]:
+        normalized["id"] = str(uuid.uuid4())
+
+    comments = record.get("comments", [])
+    if isinstance(comments, list):
+        for comment in comments:
+            if hasattr(comment, "__dict__"):
+                comment = comment.__dict__
+            if not isinstance(comment, dict):
+                continue
+            text = str(comment.get("text", "")).strip()
+            if not text:
+                continue
+            try:
+                likes = int(comment.get("likes", 0))
+            except (TypeError, ValueError):
+                likes = 0
+            normalized["comments"].append(
+                {
+                    "id": str(comment.get("id", "")).strip() or str(uuid.uuid4()),
+                    "text": text,
+                    "likes": max(0, likes),
+                }
+            )
+    return normalized
 
 
 def load_textbooks(path=None):
@@ -74,10 +102,12 @@ def add_textbook(
     """教科書情報を検証して追加する。"""
     record = _normalize_record(
         {
+            "id": str(uuid.uuid4()),
             "lecture_name": lecture_name,
             "professor_name": professor_name,
             "required_textbook": required_textbook,
             "reference_book": reference_book,
+            "comments": [],
         }
     )
 
@@ -95,3 +125,38 @@ def add_textbook(
     records.append(record)
     save_textbooks(records, path)
     return record
+
+
+def add_comment(textbook_id, text, path=None):
+    """指定した教科書にコメントを追加する。"""
+    comment_text = str(text).strip()
+    if not comment_text:
+        raise ValueError("コメントを入力してください")
+
+    records = load_textbooks(path)
+    for record in records:
+        if record["id"] == textbook_id:
+            record["comments"].append(
+                {
+                    "id": str(uuid.uuid4()),
+                    "text": comment_text,
+                    "likes": 0,
+                }
+            )
+            save_textbooks(records, path)
+            return record["comments"][-1]
+    raise ValueError("教科書が見つかりません")
+
+
+def like_comment(textbook_id, comment_id, path=None):
+    """指定したコメントのグッド数を1増やす。"""
+    records = load_textbooks(path)
+    for record in records:
+        if record["id"] == textbook_id:
+            for comment in record["comments"]:
+                if comment["id"] == comment_id:
+                    comment["likes"] += 1
+                    save_textbooks(records, path)
+                    return comment
+            raise ValueError("コメントが見つかりません")
+    raise ValueError("教科書が見つかりません")

@@ -2,14 +2,13 @@ import json
 import sys
 from pathlib import Path
 
-import pandas as pd
 import streamlit as st
 
 PROJECT_ROOT = Path(__file__).parent.parent
 if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
 
-from models.textbook import add_textbook, load_textbooks
+from models.textbook import add_comment, add_textbook, like_comment, load_textbooks
 
 
 st.set_page_config(
@@ -88,18 +87,60 @@ with tab_list:
 
         st.caption(f"{len(filtered)} 件")
         if filtered:
-            table = pd.DataFrame(
-                [
-                    {
-                        "講義名": item["lecture_name"],
-                        "教授名": item["professor_name"],
-                        "指定教科書": item["required_textbook"] or "未登録",
-                        "市販参考書": item["reference_book"] or "未登録",
-                    }
-                    for item in filtered
-                ]
-            )
-            st.dataframe(table, use_container_width=True, hide_index=True)
+            for item in filtered:
+                title = f"{item['lecture_name']} - {item['professor_name']}教授"
+                with st.expander(title, expanded=False):
+                    col1, col2 = st.columns(2)
+                    with col1:
+                        st.markdown("**指定教科書**")
+                        st.write(item["required_textbook"] or "未登録")
+                    with col2:
+                        st.markdown("**市販参考書**")
+                        st.write(item["reference_book"] or "未登録")
+
+                    st.divider()
+                    st.subheader("レビュー")
+                    comments = sorted(
+                        item["comments"],
+                        key=lambda comment: (-comment["likes"], comment["id"]),
+                    )
+
+                    if comments:
+                        for comment in comments:
+                            comment_container = st.container()
+                            comment_container.markdown(comment["text"])
+                            vote_key = f"{item['id']}:{comment['id']}"
+                            voted = vote_key in st.session_state
+                            good_label = f"グッド済 {comment['likes']}" if voted else f"グッド {comment['likes']}"
+                            if comment_container.button(
+                                good_label,
+                                key=f"good-{vote_key}",
+                                disabled=voted,
+                                use_container_width=False,
+                            ):
+                                try:
+                                    like_comment(item["id"], comment["id"])
+                                    st.session_state[vote_key] = True
+                                    st.rerun()
+                                except (ValueError, OSError) as error:
+                                    st.error(str(error))
+                            comment_container.caption("役に立った！")
+                    else:
+                        st.caption("まだレビューはありません")
+
+                    with st.form(key=f"comment-form-{item['id']}", clear_on_submit=True):
+                        comment_text = st.text_area(
+                            "レビューを書く",
+                            placeholder="教科書の使い方、難易度、授業との相性など",
+                            key=f"comment-text-{item['id']}",
+                        )
+                        if st.form_submit_button("レビューを投稿"):
+                            try:
+                                add_comment(item["id"], comment_text)
+                                st.success("レビューを投稿しました")
+                                st.rerun()
+                            except (ValueError, OSError) as error:
+                                st.error(str(error))
         else:
             st.info("該当する教科書情報はありません")
     else:
