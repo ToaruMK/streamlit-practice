@@ -196,10 +196,18 @@ with tab_list:
                     else:
                         st.caption("まだレビューはありません")
 
+                    st.info(
+                        "レビューには、使う頻度（毎回・試験前など）、"
+                        "新品がよいか中古でもよいか、内容のわかりやすさを"
+                        "書いてもらえると、ほかの学生の参考になります。"
+                    )
                     with st.form(key=f"comment-form-{item['id']}", clear_on_submit=True):
                         comment_text = st.text_area(
                             "レビューを書く",
-                            placeholder="教科書の使い方、難易度、授業との相性など",
+                            placeholder=(
+                                "例：毎回の授業で使います。書き込みがなければ中古で十分です。"
+                                "説明がわかりやすく、予習にも役立ちました。"
+                            ),
                             key=f"comment-text-{item['id']}",
                         )
                         if st.form_submit_button("レビューを投稿"):
