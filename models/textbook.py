@@ -145,6 +145,12 @@ def _normalize_record(record):
                     "id": str(comment.get("id", "")).strip() or str(uuid.uuid4()),
                     "text": text,
                     "likes": max(0, likes),
+                    "book_type": (
+                        comment.get("book_type")
+                        if comment.get("book_type")
+                        in ("required_textbook", "reference_book")
+                        else "required_textbook"
+                    ),
                 }
             )
     return normalized
@@ -423,11 +429,13 @@ def rating_summary(record, metric, book_type=None):
     }
 
 
-def add_comment(textbook_id, text, path=None):
+def add_comment(textbook_id, text, path=None, book_type="required_textbook"):
     """指定した教科書にコメントを追加する。"""
     comment_text = str(text).strip()
     if not comment_text:
         raise ValueError("コメントを入力してください")
+    if book_type not in ("required_textbook", "reference_book"):
+        raise ValueError("レビューする教科書が正しくありません")
 
     records = load_textbooks(path)
     for record in records:
@@ -437,6 +445,7 @@ def add_comment(textbook_id, text, path=None):
                     "id": str(uuid.uuid4()),
                     "text": comment_text,
                     "likes": 0,
+                    "book_type": book_type,
                 }
             )
             save_textbooks(records, path)

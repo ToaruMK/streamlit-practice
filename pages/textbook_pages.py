@@ -109,6 +109,72 @@ def _render_book_rating(item, book_type, metric, metric_label, voter_id):
                         st.error(str(error))
 
 
+def _render_book_reviews(item, book_type, book_label):
+    comments = sorted(
+        (
+            comment
+            for comment in item["comments"]
+            if comment["book_type"] == book_type
+        ),
+        key=lambda comment: (-comment["likes"], comment["id"]),
+    )
+    with st.expander(
+        f"{book_label}のレビューを見る・投稿する（{len(comments)}件）",
+        expanded=False,
+    ):
+        if comments:
+            for comment in comments:
+                comment_col, like_col = st.columns([12, 1])
+                with comment_col:
+                    st.markdown(comment["text"])
+                with like_col:
+                    vote_key = f"{item['id']}:{comment['id']}"
+                    voted = vote_key in st.session_state
+                    if st.button(
+                        str(comment["likes"]),
+                        icon="👍",
+                        key=f"good-{vote_key}",
+                        disabled=voted,
+                        help="グッド済み" if voted else "このレビューにグッド",
+                    ):
+                        try:
+                            like_comment(item["id"], comment["id"])
+                            st.session_state[vote_key] = True
+                            st.rerun()
+                        except (ValueError, OSError) as error:
+                            st.error(str(error))
+        else:
+            st.caption("この教科書のレビューはまだありません")
+
+        st.info(
+            "使う頻度（毎回・試験前など）、新品がよいか中古でもよいか、"
+            "教科書のわかりやすさを書くと、ほかの学生の参考になります。"
+        )
+        with st.form(
+            key=f"comment-form-{book_type}-{item['id']}",
+            clear_on_submit=True,
+        ):
+            comment_text = st.text_area(
+                f"{book_label}のレビューを書く",
+                placeholder=(
+                    "例：毎回の授業で使います。書き込みがなければ中古で十分です。"
+                    "説明がわかりやすく、予習にも役立ちました。"
+                ),
+                key=f"comment-text-{book_type}-{item['id']}",
+            )
+            if st.form_submit_button("レビューを投稿", use_container_width=True):
+                try:
+                    add_comment(
+                        item["id"],
+                        comment_text,
+                        book_type=book_type,
+                    )
+                    st.success(f"{book_label}のレビューを投稿しました")
+                    st.rerun()
+                except (ValueError, OSError) as error:
+                    st.error(str(error))
+
+
 st.set_page_config(
     page_title="横浜国立大学 教科書レビュー",
     page_icon="📚",
@@ -692,6 +758,11 @@ with tab_list:
                                 "授業での使用頻度",
                                 voter_id,
                             )
+                        _render_book_reviews(
+                            item,
+                            "required_textbook",
+                            "指定教科書",
+                        )
 
                     with col2:
                         st.markdown("**市販参考書**")
@@ -719,73 +790,13 @@ with tab_list:
                                     "授業での使用頻度",
                                     voter_id,
                                 )
+                            _render_book_reviews(
+                                item,
+                                "reference_book",
+                                "市販参考書",
+                            )
                         else:
                             st.caption("市販参考書は未登録です")
-
-                    st.divider()
-                    comments = sorted(
-                        item["comments"],
-                        key=lambda comment: (-comment["likes"], comment["id"]),
-                    )
-
-                    with st.expander(
-                        f"レビューを見る・投稿する（{len(comments)}件）",
-                        expanded=False,
-                    ):
-                        if comments:
-                            for comment in comments:
-                                comment_col, like_col = st.columns([12, 1])
-                                with comment_col:
-                                    st.markdown(comment["text"])
-                                with like_col:
-                                    vote_key = f"{item['id']}:{comment['id']}"
-                                    voted = vote_key in st.session_state
-                                    if st.button(
-                                        str(comment["likes"]),
-                                        icon="👍",
-                                        key=f"good-{vote_key}",
-                                        disabled=voted,
-                                        help=(
-                                            "グッド済み"
-                                            if voted
-                                            else "このレビューにグッド"
-                                        ),
-                                    ):
-                                        try:
-                                            like_comment(item["id"], comment["id"])
-                                            st.session_state[vote_key] = True
-                                            st.rerun()
-                                        except (ValueError, OSError) as error:
-                                            st.error(str(error))
-                        else:
-                            st.caption("まだレビューはありません")
-
-                        st.info(
-                            "使う頻度（毎回・試験前など）、新品がよいか中古でもよいか、"
-                            "教科書のわかりやすさを書くと、ほかの学生の参考になります。"
-                        )
-                        with st.form(
-                            key=f"comment-form-{item['id']}",
-                            clear_on_submit=True,
-                        ):
-                            comment_text = st.text_area(
-                                "レビューを書く",
-                                placeholder=(
-                                    "例：毎回の授業で使います。書き込みがなければ中古で十分です。"
-                                    "説明がわかりやすく、予習にも役立ちました。"
-                                ),
-                                key=f"comment-text-{item['id']}",
-                            )
-                            if st.form_submit_button(
-                                "レビューを投稿",
-                                use_container_width=True,
-                            ):
-                                try:
-                                    add_comment(item["id"], comment_text)
-                                    st.success("レビューを投稿しました")
-                                    st.rerun()
-                                except (ValueError, OSError) as error:
-                                    st.error(str(error))
 
         else:
             st.info("該当する教科書情報はありません")
