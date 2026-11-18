@@ -1,9 +1,11 @@
 import json
 import importlib.util
+import os
 import uuid
 from pathlib import Path
 
 import streamlit as st
+from streamlit.errors import StreamlitSecretNotFoundError
 
 PROJECT_ROOT = Path(__file__).parent.parent
 module_path = PROJECT_ROOT / "models" / "textbook.py"
@@ -21,6 +23,17 @@ load_textbooks = textbook_model.load_textbooks
 rate_textbook = textbook_model.rate_textbook
 rating_summary = textbook_model.rating_summary
 update_textbook = textbook_model.update_textbook
+delete_textbook = textbook_model.delete_textbook
+
+auth_module_path = PROJECT_ROOT / "models" / "admin_auth.py"
+auth_spec = importlib.util.spec_from_file_location(
+    "_streamlit_practice_admin_auth", auth_module_path
+)
+if auth_spec is None or auth_spec.loader is None:
+    raise ImportError(f"管理者認証を読み込めませんでした：{auth_module_path}")
+admin_auth = importlib.util.module_from_spec(auth_spec)
+auth_spec.loader.exec_module(admin_auth)
+verify_admin_password = admin_auth.verify_admin_password
 
 DEPARTMENTS = [
     "教育",
@@ -91,9 +104,32 @@ st.markdown(
     [data-testid="stTabs"] button[role="tab"] {
         color: #355b50;
     }
-    [data-testid="stBaseButton-primary"] {
-        background: #23866b;
-        border-color: #23866b;
+    [data-testid="stFormSubmitButton"] button,
+    [data-testid="stBaseButton-primaryFormSubmit"],
+    [data-testid="stBaseButton-secondaryFormSubmit"] {
+        background-color: #167653 !important;
+        border: 1px solid #126447 !important;
+        color: #ffffff !important;
+        min-height: 2.8rem;
+        font-weight: 700;
+    }
+    [data-testid="stFormSubmitButton"] button *,
+    [data-testid="stBaseButton-primaryFormSubmit"] *,
+    [data-testid="stBaseButton-secondaryFormSubmit"] * {
+        color: #ffffff !important;
+        -webkit-text-fill-color: #ffffff !important;
+    }
+    [data-testid="stFormSubmitButton"] button:hover,
+    [data-testid="stBaseButton-primaryFormSubmit"]:hover,
+    [data-testid="stBaseButton-secondaryFormSubmit"]:hover {
+        background-color: #105f42 !important;
+        border-color: #0d5138 !important;
+    }
+    [data-testid="stFormSubmitButton"] button:focus-visible,
+    [data-testid="stBaseButton-primaryFormSubmit"]:focus-visible,
+    [data-testid="stBaseButton-secondaryFormSubmit"]:focus-visible {
+        outline: 3px solid #f0ad3d !important;
+        outline-offset: 2px;
     }
     [data-testid="stTextInput"] input,
     [data-testid="stTextArea"] textarea,
@@ -132,6 +168,39 @@ st.markdown(
     """,
     unsafe_allow_html=True,
 )
+
+admin_password_hash = os.environ.get("TEXTBOOK_ADMIN_PASSWORD_HASH", "")
+if not admin_password_hash:
+    try:
+        admin_password_hash = st.secrets.get("admin_password_hash", "")
+    except StreamlitSecretNotFoundError:
+        admin_password_hash = ""
+
+with st.sidebar:
+    st.subheader("管理者")
+    if not admin_password_hash:
+        st.warning(
+            "管理者パスワードが未設定です。環境変数 "
+            "TEXTBOOK_ADMIN_PASSWORD_HASH または Streamlit Secrets の "
+            "admin_password_hash を設定してください。"
+        )
+    elif st.session_state.get("is_admin") is True:
+        st.success("管理者としてログイン中")
+        if st.button("管理者ログアウト", use_container_width=True):
+            st.session_state["is_admin"] = False
+            st.rerun()
+    else:
+        with st.form("admin-login-form"):
+            admin_password = st.text_input(
+                "管理者パスワード",
+                type="password",
+            )
+            if st.form_submit_button("管理者ログイン", use_container_width=True):
+                if verify_admin_password(admin_password, admin_password_hash):
+                    st.session_state["is_admin"] = True
+                    st.rerun()
+                else:
+                    st.error("パスワードが正しくありません")
 
 if "rating_voter_id" not in st.session_state:
     st.session_state["rating_voter_id"] = str(uuid.uuid4())
@@ -197,18 +266,22 @@ with tab_add:
                 placeholder="入力するか、過去の登録候補から選択",
             )
 
-        st.caption("評価は任意です。星が多いほど高評価です。")
-        rating_col1, rating_col2 = st.columns(2)
-        with rating_col1:
+        st.markdown("**教科書ごとのわかりやすさ（任意）**")
+        clarity_col1, clarity_col2 = st.columns(2)
+        with clarity_col1:
             initial_clarity = st.selectbox(
-                "教科書のわかりやすさ（任意）",
+                "指定教科書のわかりやすさ",
                 RATING_CHOICES,
             )
-        with rating_col2:
-            initial_frequency = st.selectbox(
-                "使う頻度（任意）",
+        with clarity_col2:
+            initial_reference_clarity = st.selectbox(
+                "市販参考書のわかりやすさ",
                 RATING_CHOICES,
             )
+        initial_frequency = st.selectbox(
+            "授業での使用頻度（任意）",
+            RATING_CHOICES,
+        )
 
         submitted = st.form_submit_button("追加する", use_container_width=True)
 
@@ -224,6 +297,9 @@ with tab_add:
                     clarity_rating=_rating_value(initial_clarity),
                     frequency_rating=_rating_value(initial_frequency),
                     voter_id=voter_id,
+                    reference_clarity_rating=_rating_value(
+                        initial_reference_clarity
+                    ),
                 )
                 st.success("教科書情報を追加しました")
                 st.rerun()
@@ -333,7 +409,10 @@ with tab_list:
                                 value=item["reference_book"],
                                 key=f"edit-reference-book-{item['id']}",
                             )
-                            if st.form_submit_button("登録情報を更新"):
+                            if st.form_submit_button(
+                                "登録情報を更新",
+                                use_container_width=True,
+                            ):
                                 try:
                                     update_textbook(
                                         item["id"],
@@ -350,84 +429,167 @@ with tab_list:
                                 except (ValueError, OSError) as error:
                                     st.error(str(error))
 
-                    rating_col1, rating_col2 = st.columns(2)
-                    for column, metric, label in (
-                        (rating_col1, "clarity", "教科書のわかりやすさ"),
-                        (rating_col2, "frequency", "使う頻度"),
-                    ):
-                        summary = rating_summary(item, metric)
-                        average = (
-                            f"★ {summary['average']:.1f} / 5"
-                            if summary["average"] is not None
-                            else "評価なし"
-                        )
-                        column.metric(label, average)
-                        column.caption(f"評価した人数：{summary['count']}人")
-
-                    with st.form(key=f"rating-form-{item['id']}"):
-                        current_ratings = item["ratings"]
-                        current_clarity = next(
-                            (
-                                vote["value"]
-                                for vote in current_ratings["clarity"]
-                                if vote["voter_id"] == voter_id
-                            ),
-                            None,
-                        )
-                        current_frequency = next(
-                            (
-                                vote["value"]
-                                for vote in current_ratings["frequency"]
-                                if vote["voter_id"] == voter_id
-                            ),
-                            None,
-                        )
-                        rating_col1, rating_col2 = st.columns(2)
-                        with rating_col1:
-                            clarity_choice = st.selectbox(
-                                "教科書のわかりやすさを評価",
-                                RATING_CHOICES,
-                                index=current_clarity or 0,
-                                key=f"clarity-rating-{item['id']}",
-                            )
-                        with rating_col2:
-                            frequency_choice = st.selectbox(
-                                "使う頻度を評価",
-                                RATING_CHOICES,
-                                index=current_frequency or 0,
-                                key=f"frequency-rating-{item['id']}",
-                            )
-                        if st.form_submit_button("評価を保存"):
-                            try:
-                                submitted_ratings = 0
-                                for metric, choice in (
-                                    ("clarity", clarity_choice),
-                                    ("frequency", frequency_choice),
-                                ):
-                                    value = _rating_value(choice)
-                                    if value is not None:
-                                        rate_textbook(
-                                            item["id"],
-                                            metric,
-                                            value,
-                                            voter_id,
-                                        )
-                                        submitted_ratings += 1
-                                if submitted_ratings:
-                                    st.success("評価を保存しました")
-                                    st.rerun()
-                                else:
-                                    st.info("星を選んでから評価を保存してください")
-                            except (ValueError, OSError) as error:
-                                st.error(str(error))
-
                     col1, col2 = st.columns(2)
                     with col1:
                         st.markdown("**指定教科書**")
                         st.write(item["required_textbook"] or "未登録")
+                        required_summary = rating_summary(
+                            item,
+                            "book_clarity",
+                            "required_textbook",
+                        )
+                        required_average = (
+                            f"★ {required_summary['average']:.1f} / 5"
+                            if required_summary["average"] is not None
+                            else "評価なし"
+                        )
+                        st.metric("この教科書のわかりやすさ", required_average)
+                        st.caption(
+                            f"評価した人数：{required_summary['count']}人"
+                        )
+                        required_vote = next(
+                            (
+                                vote["value"]
+                                for vote in item["ratings"]["book_clarity"][
+                                    "required_textbook"
+                                ]
+                                if vote["voter_id"] == voter_id
+                            ),
+                            None,
+                        )
+                        with st.form(key=f"required-clarity-{item['id']}"):
+                            required_clarity_choice = st.selectbox(
+                                "この指定教科書を評価",
+                                RATING_CHOICES,
+                                index=required_vote or 0,
+                                key=f"required-clarity-choice-{item['id']}",
+                            )
+                            if st.form_submit_button(
+                                "指定教科書の評価を保存",
+                                use_container_width=True,
+                            ):
+                                value = _rating_value(required_clarity_choice)
+                                if value is None:
+                                    st.info("星を選んでから評価を保存してください")
+                                else:
+                                    try:
+                                        rate_textbook(
+                                            item["id"],
+                                            "book_clarity",
+                                            value,
+                                            voter_id,
+                                            book_type="required_textbook",
+                                        )
+                                        st.success("指定教科書の評価を保存しました")
+                                        st.rerun()
+                                    except (ValueError, OSError) as error:
+                                        st.error(str(error))
                     with col2:
                         st.markdown("**市販参考書**")
                         st.write(item["reference_book"] or "未登録")
+                        if item["reference_book"]:
+                            reference_summary = rating_summary(
+                                item,
+                                "book_clarity",
+                                "reference_book",
+                            )
+                            reference_average = (
+                                f"★ {reference_summary['average']:.1f} / 5"
+                                if reference_summary["average"] is not None
+                                else "評価なし"
+                            )
+                            st.metric("この参考書のわかりやすさ", reference_average)
+                            st.caption(
+                                f"評価した人数：{reference_summary['count']}人"
+                            )
+                            reference_vote = next(
+                                (
+                                    vote["value"]
+                                    for vote in item["ratings"]["book_clarity"][
+                                        "reference_book"
+                                    ]
+                                    if vote["voter_id"] == voter_id
+                                ),
+                                None,
+                            )
+                            with st.form(key=f"reference-clarity-{item['id']}"):
+                                reference_clarity_choice = st.selectbox(
+                                    "この市販参考書を評価",
+                                    RATING_CHOICES,
+                                    index=reference_vote or 0,
+                                    key=f"reference-clarity-choice-{item['id']}",
+                                )
+                                if st.form_submit_button(
+                                    "市販参考書の評価を保存",
+                                    use_container_width=True,
+                                ):
+                                    value = _rating_value(reference_clarity_choice)
+                                    if value is None:
+                                        st.info(
+                                            "星を選んでから評価を保存してください"
+                                        )
+                                    else:
+                                        try:
+                                            rate_textbook(
+                                                item["id"],
+                                                "book_clarity",
+                                                value,
+                                                voter_id,
+                                                book_type="reference_book",
+                                            )
+                                            st.success(
+                                                "市販参考書の評価を保存しました"
+                                            )
+                                            st.rerun()
+                                        except (ValueError, OSError) as error:
+                                            st.error(str(error))
+                        else:
+                            st.caption("市販参考書は未登録です")
+
+                    frequency_summary = rating_summary(item, "frequency")
+                    frequency_average = (
+                        f"★ {frequency_summary['average']:.1f} / 5"
+                        if frequency_summary["average"] is not None
+                        else "評価なし"
+                    )
+                    st.metric("授業での使用頻度", frequency_average)
+                    st.caption(
+                        f"評価した人数：{frequency_summary['count']}人"
+                    )
+                    current_frequency = next(
+                        (
+                            vote["value"]
+                            for vote in item["ratings"]["frequency"]
+                            if vote["voter_id"] == voter_id
+                        ),
+                        None,
+                    )
+                    with st.form(key=f"frequency-rating-{item['id']}"):
+                        frequency_choice = st.selectbox(
+                            "授業で使う頻度を評価",
+                            RATING_CHOICES,
+                            index=current_frequency or 0,
+                            key=f"frequency-choice-{item['id']}",
+                        )
+                        if st.form_submit_button(
+                            "使用頻度の評価を保存",
+                            use_container_width=True,
+                        ):
+                            value = _rating_value(frequency_choice)
+                            if value is None:
+                                st.info("星を選んでから評価を保存してください")
+                            else:
+                                try:
+                                    rate_textbook(
+                                        item["id"],
+                                        "frequency",
+                                        value,
+                                        voter_id,
+                                    )
+                                    st.success("使用頻度の評価を保存しました")
+                                    st.rerun()
+                                except (ValueError, OSError) as error:
+                                    st.error(str(error))
 
                     st.divider()
                     comments = sorted(
@@ -483,12 +645,45 @@ with tab_list:
                                 ),
                                 key=f"comment-text-{item['id']}",
                             )
-                            if st.form_submit_button("レビューを投稿"):
+                            if st.form_submit_button(
+                                "レビューを投稿",
+                                use_container_width=True,
+                            ):
                                 try:
                                     add_comment(item["id"], comment_text)
                                     st.success("レビューを投稿しました")
                                     st.rerun()
                                 except (ValueError, OSError) as error:
+                                    st.error(str(error))
+
+                    if st.session_state.get("is_admin") is True:
+                        with st.expander("管理者操作"):
+                            st.warning(
+                                "教科書情報を削除すると、関連するレビューと評価も削除されます。"
+                            )
+                            confirm_delete = st.checkbox(
+                                "この教科書情報一式を削除することを確認",
+                                key=f"confirm-delete-{item['id']}",
+                            )
+                            if st.button(
+                                "教科書情報を削除",
+                                key=f"delete-textbook-{item['id']}",
+                                disabled=not confirm_delete,
+                                use_container_width=True,
+                            ):
+                                try:
+                                    delete_textbook(
+                                        item["id"],
+                                        is_admin=(
+                                            st.session_state.get("is_admin") is True
+                                        ),
+                                    )
+                                    st.session_state.pop(
+                                        f"confirm-delete-{item['id']}", None
+                                    )
+                                    st.success("教科書情報を削除しました")
+                                    st.rerun()
+                                except (PermissionError, ValueError, OSError) as error:
                                     st.error(str(error))
         else:
             st.info("該当する教科書情報はありません")
