@@ -34,27 +34,23 @@ with tab_add:
     st.subheader("新しい情報を追加")
     with st.form("textbook_form", clear_on_submit=True):
         department = st.text_input(
-            "学科",
+            "学科（必須）",
             placeholder="例：情報工学EP",
-            required=True,
         )
         lecture_name = st.text_input(
-            "授業名",
+            "授業名（必須）",
             placeholder="例：線形代数学",
-            required=True,
         )
         professor_name = st.text_input(
-            "教授名",
+            "教授名（必須）",
             placeholder="例：山田 太郎",
-            required=True,
         )
 
         col1, col2 = st.columns(2)
         with col1:
             required_textbook = st.text_input(
-                "指定教科書",
+                "指定教科書名（必須）",
                 placeholder="授業で指定された教科書",
-                required=True,
             )
         with col2:
             reference_book = st.text_input(
