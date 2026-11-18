@@ -18,6 +18,23 @@ add_textbook = textbook_model.add_textbook
 like_comment = textbook_model.like_comment
 load_textbooks = textbook_model.load_textbooks
 
+DEPARTMENTS = [
+    "教育",
+    "経済",
+    "経営",
+    "機械",
+    "材料",
+    "海洋系",
+    "化学・生命",
+    "数理",
+    "物理",
+    "電子情報",
+    "情報工学",
+    "都市社会共生",
+    "建築",
+    "都市基盤",
+    "環境リスク",
+]
 
 st.set_page_config(
     page_title="横浜国立大学 教科書レビュー",
@@ -33,10 +50,7 @@ tab_list, tab_add = st.tabs(["教科書一覧", "教科書を追加"])
 with tab_add:
     st.subheader("新しい情報を追加")
     with st.form("textbook_form", clear_on_submit=True):
-        department = st.text_input(
-            "学科（必須）",
-            placeholder="例：情報工学EP",
-        )
+        department = st.selectbox("学科（必須）", DEPARTMENTS)
         lecture_name = st.text_input(
             "授業名（必須）",
             placeholder="例：線形代数学",
