@@ -1,11 +1,9 @@
 import json
 import importlib.util
-import os
 import uuid
 from pathlib import Path
 
 import streamlit as st
-from streamlit.errors import StreamlitSecretNotFoundError
 
 PROJECT_ROOT = Path(__file__).parent.parent
 module_path = PROJECT_ROOT / "models" / "textbook.py"
@@ -23,17 +21,6 @@ load_textbooks = textbook_model.load_textbooks
 rate_textbook = textbook_model.rate_textbook
 rating_summary = textbook_model.rating_summary
 update_textbook = textbook_model.update_textbook
-delete_textbook = textbook_model.delete_textbook
-
-auth_module_path = PROJECT_ROOT / "models" / "admin_auth.py"
-auth_spec = importlib.util.spec_from_file_location(
-    "_streamlit_practice_admin_auth", auth_module_path
-)
-if auth_spec is None or auth_spec.loader is None:
-    raise ImportError(f"管理者認証を読み込めませんでした：{auth_module_path}")
-admin_auth = importlib.util.module_from_spec(auth_spec)
-auth_spec.loader.exec_module(admin_auth)
-verify_admin_password = admin_auth.verify_admin_password
 
 DEPARTMENTS = [
     "教育",
@@ -168,39 +155,6 @@ st.markdown(
     """,
     unsafe_allow_html=True,
 )
-
-admin_password_hash = os.environ.get("TEXTBOOK_ADMIN_PASSWORD_HASH", "")
-if not admin_password_hash:
-    try:
-        admin_password_hash = st.secrets.get("admin_password_hash", "")
-    except StreamlitSecretNotFoundError:
-        admin_password_hash = ""
-
-with st.sidebar:
-    st.subheader("管理者")
-    if not admin_password_hash:
-        st.warning(
-            "管理者パスワードが未設定です。環境変数 "
-            "TEXTBOOK_ADMIN_PASSWORD_HASH または Streamlit Secrets の "
-            "admin_password_hash を設定してください。"
-        )
-    elif st.session_state.get("is_admin") is True:
-        st.success("管理者としてログイン中")
-        if st.button("管理者ログアウト", use_container_width=True):
-            st.session_state["is_admin"] = False
-            st.rerun()
-    else:
-        with st.form("admin-login-form"):
-            admin_password = st.text_input(
-                "管理者パスワード",
-                type="password",
-            )
-            if st.form_submit_button("管理者ログイン", use_container_width=True):
-                if verify_admin_password(admin_password, admin_password_hash):
-                    st.session_state["is_admin"] = True
-                    st.rerun()
-                else:
-                    st.error("パスワードが正しくありません")
 
 if "rating_voter_id" not in st.session_state:
     st.session_state["rating_voter_id"] = str(uuid.uuid4())
@@ -656,35 +610,6 @@ with tab_list:
                                 except (ValueError, OSError) as error:
                                     st.error(str(error))
 
-                    if st.session_state.get("is_admin") is True:
-                        with st.expander("管理者操作"):
-                            st.warning(
-                                "教科書情報を削除すると、関連するレビューと評価も削除されます。"
-                            )
-                            confirm_delete = st.checkbox(
-                                "この教科書情報一式を削除することを確認",
-                                key=f"confirm-delete-{item['id']}",
-                            )
-                            if st.button(
-                                "教科書情報を削除",
-                                key=f"delete-textbook-{item['id']}",
-                                disabled=not confirm_delete,
-                                use_container_width=True,
-                            ):
-                                try:
-                                    delete_textbook(
-                                        item["id"],
-                                        is_admin=(
-                                            st.session_state.get("is_admin") is True
-                                        ),
-                                    )
-                                    st.session_state.pop(
-                                        f"confirm-delete-{item['id']}", None
-                                    )
-                                    st.success("教科書情報を削除しました")
-                                    st.rerun()
-                                except (PermissionError, ValueError, OSError) as error:
-                                    st.error(str(error))
         else:
             st.info("該当する教科書情報はありません")
     else:

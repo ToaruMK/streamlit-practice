@@ -356,18 +356,6 @@ def update_textbook(
     raise ValueError("教科書が見つかりません")
 
 
-def delete_textbook(textbook_id, is_admin=False, path=None):
-    """管理者だけが教科書情報と関連レビュー・評価を削除できる。"""
-    if not is_admin:
-        raise PermissionError("教科書情報を削除できるのは管理者だけです")
-
-    records = load_textbooks(path)
-    remaining = [record for record in records if record["id"] != textbook_id]
-    if len(remaining) == len(records):
-        raise ValueError("教科書が見つかりません")
-    save_textbooks(remaining, path)
-
-
 def _validate_rating(value):
     try:
         rating = int(value)
