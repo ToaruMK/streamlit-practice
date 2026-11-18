@@ -68,6 +68,18 @@ st.markdown(
         background: linear-gradient(135deg, #f7fbff 0%, #f2fbf5 100%);
         color: #263746;
     }
+    section[data-testid="stSidebar"] {
+        background: #ffffff;
+    }
+    section[data-testid="stSidebar"] * {
+        color: #263746;
+    }
+    [data-testid="stWidgetLabel"] p,
+    [data-testid="stCaptionContainer"] p,
+    [data-testid="stMarkdownContainer"] p,
+    [data-testid="stTabs"] button[role="tab"] * {
+        color: #263746 !important;
+    }
     [data-testid="stHeader"] {
         background: rgba(255, 255, 255, 0.72);
     }
@@ -85,9 +97,36 @@ st.markdown(
     }
     [data-testid="stTextInput"] input,
     [data-testid="stTextArea"] textarea,
-    [data-testid="stSelectbox"] [role="combobox"],
-    [data-testid="stMultiSelect"] [role="combobox"] {
-        background-color: #ffffff;
+    [data-testid="stSelectbox"] input,
+    [data-testid="stMultiSelect"] input {
+        background-color: #ffffff !important;
+        color: #263746 !important;
+        -webkit-text-fill-color: #263746 !important;
+    }
+    [data-testid="stSelectbox"] [data-baseweb="select"] > div,
+    [data-testid="stMultiSelect"] [data-baseweb="select"] > div {
+        background-color: #ffffff !important;
+        color: #263746 !important;
+    }
+    [data-testid="stSelectbox"] [data-baseweb="select"] div,
+    [data-testid="stMultiSelect"] [data-baseweb="select"] div {
+        color: #263746 !important;
+        -webkit-text-fill-color: #263746 !important;
+    }
+    [data-testid="stTextInput"] input::placeholder,
+    [data-testid="stTextArea"] textarea::placeholder,
+    [data-testid="stSelectbox"] input::placeholder,
+    [data-testid="stMultiSelect"] input::placeholder {
+        color: #667987 !important;
+        -webkit-text-fill-color: #667987 !important;
+        opacity: 1;
+    }
+    [data-testid="stMultiSelect"] [data-baseweb="tag"] {
+        background-color: #dcefe8;
+        color: #263746;
+    }
+    [data-testid="stMultiSelect"] [data-baseweb="tag"] span {
+        color: #263746 !important;
     }
     </style>
     """,
