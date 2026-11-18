@@ -1,3 +1,4 @@
+import html
 import json
 import importlib.util
 import uuid
@@ -199,6 +200,28 @@ st.markdown(
         background-color: #fffaf0;
         border: 1px solid #f0dfb0;
         border-radius: 0.6rem;
+    }
+    .book-title-card {
+        min-height: 2.8rem;
+        margin: 0.25rem 0 0.65rem;
+        padding: 0.55rem 0.75rem;
+        background-color: #edf7f1;
+        border: 1px solid #c9e3d4;
+        border-left: 4px solid #167653;
+        border-radius: 0.45rem;
+        color: #173c2f;
+        font-size: 1.08rem;
+        font-weight: 700;
+        line-height: 1.45;
+        overflow-wrap: anywhere;
+    }
+    .book-title-card.is-empty {
+        background-color: #f7f9f8;
+        border-color: #e0e7e3;
+        border-left-color: #aebfb7;
+        color: #667987;
+        font-size: 0.95rem;
+        font-weight: 500;
     }
     .book-rating-label {
         color: #263746;
@@ -640,7 +663,18 @@ with tab_list:
                     col1, col2 = st.columns(2)
                     with col1:
                         st.markdown("**指定教科書**")
-                        st.write(item["required_textbook"] or "未登録")
+                        required_book = html.escape(
+                            item["required_textbook"] or "未登録"
+                        )
+                        required_book_class = (
+                            "book-title-card"
+                            if item["required_textbook"]
+                            else "book-title-card is-empty"
+                        )
+                        st.markdown(
+                            f'<div class="{required_book_class}">{required_book}</div>',
+                            unsafe_allow_html=True,
+                        )
                         clarity_col, frequency_col = st.columns(2, gap="small")
                         with clarity_col:
                             _render_book_rating(
@@ -661,7 +695,12 @@ with tab_list:
 
                     with col2:
                         st.markdown("**市販参考書**")
-                        st.write(item["reference_book"] or "未登録")
+                        if item["reference_book"]:
+                            reference_book = html.escape(item["reference_book"])
+                            st.markdown(
+                                f'<div class="book-title-card">{reference_book}</div>',
+                                unsafe_allow_html=True,
+                            )
                         if item["reference_book"]:
                             clarity_col, frequency_col = st.columns(2, gap="small")
                             with clarity_col:
