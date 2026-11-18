@@ -98,7 +98,7 @@ with tab_add:
         rating_col1, rating_col2 = st.columns(2)
         with rating_col1:
             initial_clarity = st.selectbox(
-                "わかりやすさ（任意）",
+                "教科書のわかりやすさ（任意）",
                 RATING_CHOICES,
             )
         with rating_col2:
@@ -255,7 +255,7 @@ with tab_list:
 
                     rating_col1, rating_col2 = st.columns(2)
                     for column, metric, label in (
-                        (rating_col1, "clarity", "わかりやすさ"),
+                        (rating_col1, "clarity", "教科書のわかりやすさ"),
                         (rating_col2, "frequency", "使う頻度"),
                     ):
                         summary = rating_summary(item, metric)
@@ -288,7 +288,7 @@ with tab_list:
                         rating_col1, rating_col2 = st.columns(2)
                         with rating_col1:
                             clarity_choice = st.selectbox(
-                                "わかりやすさを評価",
+                                "教科書のわかりやすさを評価",
                                 RATING_CHOICES,
                                 index=current_clarity or 0,
                                 key=f"clarity-rating-{item['id']}",
