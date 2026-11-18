@@ -53,6 +53,53 @@ RATING_CHOICES = [
 def _rating_value(choice):
     return RATING_CHOICES.index(choice) if choice != RATING_CHOICES[0] else None
 
+
+def _render_book_frequency(item, book_type, book_label, voter_id):
+    summary = rating_summary(item, "book_frequency", book_type)
+    average = (
+        f"★ {summary['average']:.1f} / 5"
+        if summary["average"] is not None
+        else "評価なし"
+    )
+    st.metric(f"{book_label}の授業での使用頻度", average)
+    st.caption(f"評価した人数：{summary['count']}人")
+    current_vote = next(
+        (
+            vote["value"]
+            for vote in item["ratings"]["book_frequency"][book_type]
+            if vote["voter_id"] == voter_id
+        ),
+        None,
+    )
+    with st.form(key=f"book-frequency-{book_type}-{item['id']}"):
+        choice = st.selectbox(
+            f"{book_label}を授業で使う頻度を評価",
+            RATING_CHOICES,
+            index=current_vote or 0,
+            key=f"book-frequency-choice-{book_type}-{item['id']}",
+        )
+        if st.form_submit_button(
+            f"{book_label}の使用頻度を保存",
+            use_container_width=True,
+        ):
+            value = _rating_value(choice)
+            if value is None:
+                st.info("星を選んでから評価を保存してください")
+            else:
+                try:
+                    rate_textbook(
+                        item["id"],
+                        "book_frequency",
+                        value,
+                        voter_id,
+                        book_type=book_type,
+                    )
+                    st.success(f"{book_label}の使用頻度を保存しました")
+                    st.rerun()
+                except (ValueError, OSError) as error:
+                    st.error(str(error))
+
+
 st.set_page_config(
     page_title="横浜国立大学 教科書レビュー",
     page_icon="📚",
@@ -91,6 +138,41 @@ st.markdown(
     [data-testid="stTabs"] button[role="tab"] {
         color: #355b50;
     }
+    [data-testid="stTabs"] button[role="tab"][aria-selected="true"] {
+        background-color: #e3f2eb !important;
+        border-bottom: 3px solid #167653 !important;
+        color: #145c42 !important;
+        font-weight: 700;
+    }
+    [data-testid="stTabs"] button[role="tab"]:focus-visible,
+    [data-testid="stButton"] button:focus-visible,
+    [data-testid="stFormSubmitButton"] button:focus-visible,
+    [data-testid="stBaseButton-primaryFormSubmit"]:focus-visible,
+    [data-testid="stBaseButton-secondaryFormSubmit"]:focus-visible {
+        outline: 3px solid #f0ad3d !important;
+        outline-offset: 2px;
+        z-index: 1;
+    }
+    [data-testid="stButton"] button {
+        background-color: #ffffff !important;
+        border: 1px solid #a9cdbd !important;
+        color: #145c42 !important;
+    }
+    [data-testid="stButton"] button * {
+        color: #145c42 !important;
+        -webkit-text-fill-color: #145c42 !important;
+    }
+    [data-testid="stButton"] button:hover,
+    [data-testid="stButton"] button:active {
+        background-color: #e3f2eb !important;
+        border-color: #167653 !important;
+        color: #104b36 !important;
+    }
+    [data-testid="stButton"] button:hover *,
+    [data-testid="stButton"] button:active * {
+        color: #104b36 !important;
+        -webkit-text-fill-color: #104b36 !important;
+    }
     [data-testid="stFormSubmitButton"] button,
     [data-testid="stBaseButton-primaryFormSubmit"],
     [data-testid="stBaseButton-secondaryFormSubmit"] {
@@ -115,8 +197,25 @@ st.markdown(
     [data-testid="stFormSubmitButton"] button:focus-visible,
     [data-testid="stBaseButton-primaryFormSubmit"]:focus-visible,
     [data-testid="stBaseButton-secondaryFormSubmit"]:focus-visible {
-        outline: 3px solid #f0ad3d !important;
-        outline-offset: 2px;
+        background-color: #105f42 !important;
+        border-color: #0d5138 !important;
+        color: #ffffff !important;
+    }
+    [data-testid="stFormSubmitButton"] button:active,
+    [data-testid="stBaseButton-primaryFormSubmit"]:active,
+    [data-testid="stBaseButton-secondaryFormSubmit"]:active {
+        background-color: #105f42 !important;
+        border-color: #0d5138 !important;
+        color: #ffffff !important;
+    }
+    [data-testid="stFormSubmitButton"] button:active *,
+    [data-testid="stBaseButton-primaryFormSubmit"]:active *,
+    [data-testid="stBaseButton-secondaryFormSubmit"]:active *,
+    [data-testid="stFormSubmitButton"] button:focus-visible *,
+    [data-testid="stBaseButton-primaryFormSubmit"]:focus-visible *,
+    [data-testid="stBaseButton-secondaryFormSubmit"]:focus-visible * {
+        color: #ffffff !important;
+        -webkit-text-fill-color: #ffffff !important;
     }
     [data-testid="stTextInput"] input,
     [data-testid="stTextArea"] textarea,
@@ -126,9 +225,43 @@ st.markdown(
         color: #263746 !important;
         -webkit-text-fill-color: #263746 !important;
     }
+    [data-testid="stTextInput"] input:focus,
+    [data-testid="stTextArea"] textarea:focus,
+    [data-testid="stSelectbox"] [data-baseweb="select"]:focus-within > div,
+    [data-testid="stMultiSelect"] [data-baseweb="select"]:focus-within > div {
+        background-color: #ffffff !important;
+        border-color: #167653 !important;
+        color: #263746 !important;
+        -webkit-text-fill-color: #263746 !important;
+        box-shadow: 0 0 0 2px rgba(22, 118, 83, 0.2) !important;
+    }
     [data-testid="stSelectbox"] [data-baseweb="select"] > div,
     [data-testid="stMultiSelect"] [data-baseweb="select"] > div {
         background-color: #ffffff !important;
+        color: #263746 !important;
+    }
+    [data-testid="stSelectbox"] [role="group"],
+    [data-testid="stMultiSelect"] [role="group"] {
+        background-color: #ffffff !important;
+        border: 1px solid #aebfb7 !important;
+        border-radius: 0.5rem;
+        color: #263746 !important;
+    }
+    [data-testid="stSelectbox"] [role="group"]:focus-within,
+    [data-testid="stMultiSelect"] [role="group"]:focus-within {
+        background-color: #ffffff !important;
+        border-color: #167653 !important;
+        box-shadow: 0 0 0 2px rgba(22, 118, 83, 0.2) !important;
+    }
+    [data-testid="stSelectbox"] [role="group"] input,
+    [data-testid="stMultiSelect"] [role="group"] input {
+        background-color: transparent !important;
+        color: #263746 !important;
+        -webkit-text-fill-color: #263746 !important;
+    }
+    [data-testid="stSelectbox"] [role="group"] button,
+    [data-testid="stMultiSelect"] [role="group"] button {
+        background-color: transparent !important;
         color: #263746 !important;
     }
     [data-testid="stSelectbox"] [data-baseweb="select"] div,
@@ -150,6 +283,20 @@ st.markdown(
     }
     [data-testid="stMultiSelect"] [data-baseweb="tag"] span {
         color: #263746 !important;
+    }
+    [data-baseweb="popover"] [role="option"],
+    [role="listbox"] [role="option"] {
+        background-color: #ffffff !important;
+        color: #263746 !important;
+    }
+    [data-baseweb="popover"] [role="option"][aria-selected="true"],
+    [data-baseweb="popover"] [role="option"]:hover,
+    [data-baseweb="popover"] [role="option"]:focus,
+    [role="listbox"] [role="option"][aria-selected="true"],
+    [role="listbox"] [role="option"]:hover,
+    [role="listbox"] [role="option"]:focus {
+        background-color: #dcefe8 !important;
+        color: #173c2f !important;
     }
     </style>
     """,
@@ -232,10 +379,18 @@ with tab_add:
                 "市販参考書のわかりやすさ",
                 RATING_CHOICES,
             )
-        initial_frequency = st.selectbox(
-            "授業での使用頻度（任意）",
-            RATING_CHOICES,
-        )
+        st.markdown("**教科書ごとの授業での使用頻度（任意）**")
+        frequency_col1, frequency_col2 = st.columns(2)
+        with frequency_col1:
+            initial_frequency = st.selectbox(
+                "指定教科書を授業で使う頻度",
+                RATING_CHOICES,
+            )
+        with frequency_col2:
+            initial_reference_frequency = st.selectbox(
+                "市販参考書を授業で使う頻度",
+                RATING_CHOICES,
+            )
 
         submitted = st.form_submit_button("追加する", use_container_width=True)
 
@@ -253,6 +408,9 @@ with tab_add:
                     voter_id=voter_id,
                     reference_clarity_rating=_rating_value(
                         initial_reference_clarity
+                    ),
+                    reference_frequency_rating=_rating_value(
+                        initial_reference_frequency
                     ),
                 )
                 st.success("教科書情報を追加しました")
@@ -438,6 +596,14 @@ with tab_list:
                                         st.rerun()
                                     except (ValueError, OSError) as error:
                                         st.error(str(error))
+
+                        _render_book_frequency(
+                            item,
+                            "required_textbook",
+                            "指定教科書",
+                            voter_id,
+                        )
+
                     with col2:
                         st.markdown("**市販参考書**")
                         st.write(item["reference_book"] or "未登録")
@@ -497,53 +663,14 @@ with tab_list:
                                             st.rerun()
                                         except (ValueError, OSError) as error:
                                             st.error(str(error))
+                            _render_book_frequency(
+                                item,
+                                "reference_book",
+                                "市販参考書",
+                                voter_id,
+                            )
                         else:
                             st.caption("市販参考書は未登録です")
-
-                    frequency_summary = rating_summary(item, "frequency")
-                    frequency_average = (
-                        f"★ {frequency_summary['average']:.1f} / 5"
-                        if frequency_summary["average"] is not None
-                        else "評価なし"
-                    )
-                    st.metric("授業での使用頻度", frequency_average)
-                    st.caption(
-                        f"評価した人数：{frequency_summary['count']}人"
-                    )
-                    current_frequency = next(
-                        (
-                            vote["value"]
-                            for vote in item["ratings"]["frequency"]
-                            if vote["voter_id"] == voter_id
-                        ),
-                        None,
-                    )
-                    with st.form(key=f"frequency-rating-{item['id']}"):
-                        frequency_choice = st.selectbox(
-                            "授業で使う頻度を評価",
-                            RATING_CHOICES,
-                            index=current_frequency or 0,
-                            key=f"frequency-choice-{item['id']}",
-                        )
-                        if st.form_submit_button(
-                            "使用頻度の評価を保存",
-                            use_container_width=True,
-                        ):
-                            value = _rating_value(frequency_choice)
-                            if value is None:
-                                st.info("星を選んでから評価を保存してください")
-                            else:
-                                try:
-                                    rate_textbook(
-                                        item["id"],
-                                        "frequency",
-                                        value,
-                                        voter_id,
-                                    )
-                                    st.success("使用頻度の評価を保存しました")
-                                    st.rerun()
-                                except (ValueError, OSError) as error:
-                                    st.error(str(error))
 
                     st.divider()
                     comments = sorted(

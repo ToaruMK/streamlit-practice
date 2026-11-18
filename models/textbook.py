@@ -45,6 +45,7 @@ def _normalize_ratings(value, required_textbook=""):
         "clarity": [],
         "frequency": [],
         "book_clarity": {"required_textbook": [], "reference_book": []},
+        "book_frequency": {"required_textbook": [], "reference_book": []},
     }
     if not isinstance(value, dict):
         return normalized
@@ -59,6 +60,15 @@ def _normalize_ratings(value, required_textbook=""):
             )
     elif required_textbook:
         normalized["book_clarity"]["required_textbook"] = normalized["clarity"]
+
+    book_frequency = value.get("book_frequency")
+    if isinstance(book_frequency, dict):
+        for book_type in normalized["book_frequency"]:
+            normalized["book_frequency"][book_type] = _normalize_rating_votes(
+                book_frequency.get(book_type, [])
+            )
+    elif required_textbook:
+        normalized["book_frequency"]["required_textbook"] = normalized["frequency"]
     return normalized
 
 
@@ -76,7 +86,11 @@ def _normalize_record(record):
     if not creator_id:
         voter_ids = {
             vote["voter_id"]
-            for votes in (ratings["clarity"], ratings["frequency"])
+            for votes in (
+                ratings["clarity"],
+                ratings["frequency"],
+                *ratings["book_frequency"].values(),
+            )
             for vote in votes
         }
         voter_ids.update(
@@ -185,6 +199,7 @@ def add_textbook(
     frequency_rating=None,
     voter_id=None,
     reference_clarity_rating=None,
+    reference_frequency_rating=None,
 ):
     """教科書情報を検証して追加する。"""
     record = _normalize_record(
@@ -201,6 +216,7 @@ def add_textbook(
                 "clarity": [],
                 "frequency": [],
                 "book_clarity": {"required_textbook": [], "reference_book": []},
+                "book_frequency": {"required_textbook": [], "reference_book": []},
             },
             "comments": [],
         }
@@ -217,25 +233,24 @@ def add_textbook(
     if missing:
         raise ValueError(f"{'・'.join(missing)}は必須です")
 
-    initial_ratings = {
-        "frequency": frequency_rating,
-    }
     if voter_id:
-        for metric, rating in initial_ratings.items():
-            if rating is not None:
-                _validate_rating(rating)
-                record["ratings"][metric].append(
-                    {"voter_id": str(voter_id), "value": int(rating)}
-                )
-        for book_type, rating in (
-            ("required_textbook", clarity_rating),
-            ("reference_book", reference_clarity_rating),
+        for book_type, metric_ratings in (
+            (
+                "required_textbook",
+                (clarity_rating, frequency_rating),
+            ),
+            (
+                "reference_book",
+                (reference_clarity_rating, reference_frequency_rating),
+            ),
         ):
-            if rating is not None and record[book_type]:
-                _validate_rating(rating)
-                record["ratings"]["book_clarity"][book_type].append(
-                    {"voter_id": str(voter_id), "value": int(rating)}
-                )
+            metrics = ("book_clarity", "book_frequency")
+            for metric, rating in zip(metrics, metric_ratings):
+                if rating is not None and record[book_type]:
+                    _validate_rating(rating)
+                    record["ratings"][metric][book_type].append(
+                        {"voter_id": str(voter_id), "value": int(rating)}
+                    )
 
     records = load_textbooks(path)
     matching_record = next(
@@ -260,15 +275,12 @@ def add_textbook(
         matching_record["creator_ids"] = _merge_choices(
             matching_record["creator_ids"], record["creator_ids"]
         )
-        _merge_rating_votes(
-            matching_record["ratings"]["frequency"],
-            record["ratings"]["frequency"],
-        )
         for book_type in ("required_textbook", "reference_book"):
-            _merge_rating_votes(
-                matching_record["ratings"]["book_clarity"][book_type],
-                record["ratings"]["book_clarity"][book_type],
-            )
+            for metric in ("book_clarity", "book_frequency"):
+                _merge_rating_votes(
+                    matching_record["ratings"][metric][book_type],
+                    record["ratings"][metric][book_type],
+                )
         matching_record["comments"].extend(record["comments"])
         save_textbooks(records, path)
         return matching_record
@@ -368,7 +380,7 @@ def _validate_rating(value):
 
 def rate_textbook(textbook_id, metric, value, voter_id, path=None, book_type=None):
     """利用者の教科書評価を追加または更新する。"""
-    if metric == "book_clarity":
+    if metric in ("book_clarity", "book_frequency"):
         if book_type not in ("required_textbook", "reference_book"):
             raise ValueError("評価する教科書が正しくありません")
     elif metric != "frequency":
@@ -381,11 +393,10 @@ def rate_textbook(textbook_id, metric, value, voter_id, path=None, book_type=Non
     records = load_textbooks(path)
     for record in records:
         if record["id"] == textbook_id:
-            votes = (
-                record["ratings"]["book_clarity"][book_type]
-                if metric == "book_clarity"
-                else record["ratings"]["frequency"]
-            )
+            if metric in ("book_clarity", "book_frequency"):
+                votes = record["ratings"][metric][book_type]
+            else:
+                votes = record["ratings"]["frequency"]
             _merge_rating_votes(votes, [{"voter_id": voter, "value": rating}])
             save_textbooks(records, path)
             return rating_summary(record, metric, book_type)
@@ -395,12 +406,13 @@ def rate_textbook(textbook_id, metric, value, voter_id, path=None, book_type=Non
 def rating_summary(record, metric, book_type=None):
     """評価平均と評価人数を返す。"""
     ratings = record.get("ratings", {})
-    if metric == "book_clarity":
+    if metric in ("book_clarity", "book_frequency"):
         if book_type not in ("required_textbook", "reference_book"):
             raise ValueError("評価する教科書が正しくありません")
-        votes = ratings.get("book_clarity", {}).get(book_type, [])
+        votes = ratings.get(metric, {}).get(book_type, [])
         if not votes and book_type == "required_textbook":
-            votes = ratings.get("clarity", [])
+            legacy_metric = "clarity" if metric == "book_clarity" else "frequency"
+            votes = ratings.get(legacy_metric, [])
     else:
         votes = ratings.get(metric, [])
     if not votes:
