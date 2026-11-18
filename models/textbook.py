@@ -18,6 +18,7 @@ def _normalize_record(record):
 
     normalized = {
         "id": str(record.get("id", "")).strip(),
+        "department": str(record.get("department", record.get("学科", ""))).strip(),
         "lecture_name": str(record.get("lecture_name", record.get("講義名", ""))).strip(),
         "professor_name": str(record.get("professor_name", record.get("教授名", ""))).strip(),
         "required_textbook": str(
@@ -98,11 +99,13 @@ def add_textbook(
     required_textbook,
     reference_book="",
     path=None,
+    department="",
 ):
     """教科書情報を検証して追加する。"""
     record = _normalize_record(
         {
             "id": str(uuid.uuid4()),
+            "department": department,
             "lecture_name": lecture_name,
             "professor_name": professor_name,
             "required_textbook": required_textbook,
@@ -112,14 +115,14 @@ def add_textbook(
     )
 
     required_fields = (
+        ("department", "学科"),
         ("lecture_name", "講義名"),
         ("professor_name", "教授名"),
+        ("required_textbook", "指定教科書"),
     )
     missing = [label for key, label in required_fields if not record[key]]
     if missing:
         raise ValueError(f"{'・'.join(missing)}は必須です")
-    if not record["required_textbook"] and not record["reference_book"]:
-        raise ValueError("指定教科書または市販参考書のいずれかを入力してください")
 
     records = load_textbooks(path)
     records.append(record)

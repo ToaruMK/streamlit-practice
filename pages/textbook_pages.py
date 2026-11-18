@@ -33,14 +33,28 @@ tab_list, tab_add = st.tabs(["教科書一覧", "教科書を追加"])
 with tab_add:
     st.subheader("新しい情報を追加")
     with st.form("textbook_form", clear_on_submit=True):
-        lecture_name = st.text_input("講義名", placeholder="例：線形代数学")
-        professor_name = st.text_input("教授名", placeholder="例：山田 太郎")
+        department = st.text_input(
+            "学科",
+            placeholder="例：情報工学EP",
+            required=True,
+        )
+        lecture_name = st.text_input(
+            "授業名",
+            placeholder="例：線形代数学",
+            required=True,
+        )
+        professor_name = st.text_input(
+            "教授名",
+            placeholder="例：山田 太郎",
+            required=True,
+        )
 
         col1, col2 = st.columns(2)
         with col1:
             required_textbook = st.text_input(
                 "指定教科書",
                 placeholder="授業で指定された教科書",
+                required=True,
             )
         with col2:
             reference_book = st.text_input(
@@ -57,6 +71,7 @@ with tab_add:
                     professor_name,
                     required_textbook,
                     reference_book,
+                    department=department,
                 )
                 st.success("教科書情報を追加しました")
                 st.rerun()
@@ -70,13 +85,26 @@ with tab_list:
         textbooks = []
         st.error(f"教科書データを読み込めませんでした：{error}")
 
+    departments = sorted(
+        {item["department"] or "学科未登録" for item in textbooks}
+    )
+    selected_department = st.selectbox(
+        "学科で絞り込む",
+        ["すべての学科"] + departments,
+    )
+
     search = st.text_input(
-        "講義名・教授名・教科書名で検索",
+        "学科・講義名・教授名・教科書名で検索",
         placeholder="キーワードを入力",
     )
 
     if textbooks:
-        filtered = textbooks
+        filtered = [
+            item
+            for item in textbooks
+            if selected_department == "すべての学科"
+            or (item["department"] or "学科未登録") == selected_department
+        ]
         keyword = search.strip().lower()
         if keyword:
             filtered = [
@@ -85,6 +113,7 @@ with tab_list:
                 if any(
                     keyword in str(item[key]).lower()
                     for key in (
+                        "department",
                         "lecture_name",
                         "professor_name",
                         "required_textbook",
@@ -96,8 +125,13 @@ with tab_list:
         st.caption(f"{len(filtered)} 件")
         if filtered:
             for item in filtered:
-                title = f"{item['lecture_name']} - {item['professor_name']}教授"
+                department_label = item["department"] or "学科未登録"
+                title = (
+                    f"{department_label} | {item['lecture_name']} "
+                    f"- {item['professor_name']}教授"
+                )
                 with st.expander(title, expanded=False):
+                    st.markdown(f"**学科：** {department_label}")
                     col1, col2 = st.columns(2)
                     with col1:
                         st.markdown("**指定教科書**")
