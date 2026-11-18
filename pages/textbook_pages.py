@@ -35,6 +35,7 @@ DEPARTMENTS = [
     "都市基盤",
     "環境リスク",
 ]
+GRADES = ["1年", "2年", "3年", "4年"]
 
 st.set_page_config(
     page_title="横浜国立大学 教科書レビュー",
@@ -51,6 +52,7 @@ with tab_add:
     st.subheader("新しい情報を追加")
     with st.form("textbook_form", clear_on_submit=True):
         department = st.selectbox("学科（必須）", DEPARTMENTS)
+        grade = st.selectbox("学年", GRADES)
         lecture_name = st.text_input(
             "授業名（必須）",
             placeholder="例：線形代数学",
@@ -82,6 +84,7 @@ with tab_add:
                     required_textbook,
                     reference_book,
                     department=department,
+                    grade=grade,
                 )
                 st.success("教科書情報を追加しました")
                 st.rerun()
@@ -102,9 +105,16 @@ with tab_list:
         "学科で絞り込む",
         ["すべての学科"] + departments,
     )
+    grades = sorted(
+        {item["grade"] or "学年未登録" for item in textbooks}
+    )
+    selected_grade = st.selectbox(
+        "学年で絞り込む",
+        ["すべての学年"] + grades,
+    )
 
     search = st.text_input(
-        "学科・講義名・教授名・教科書名で検索",
+        "学科・学年・授業名・教授名・教科書名で検索",
         placeholder="キーワードを入力",
     )
 
@@ -115,15 +125,22 @@ with tab_list:
             if selected_department == "すべての学科"
             or (item["department"] or "学科未登録") == selected_department
         ]
+        if selected_grade != "すべての学年":
+            filtered = [
+                item
+                for item in filtered
+                if (item["grade"] or "学年未登録") == selected_grade
+            ]
         keyword = search.strip().lower()
         if keyword:
             filtered = [
                 item
-                for item in textbooks
+                for item in filtered
                 if any(
                     keyword in str(item[key]).lower()
                     for key in (
                         "department",
+                        "grade",
                         "lecture_name",
                         "professor_name",
                         "required_textbook",
@@ -136,12 +153,14 @@ with tab_list:
         if filtered:
             for item in filtered:
                 department_label = item["department"] or "学科未登録"
+                grade_label = item["grade"] or "学年未登録"
                 title = (
-                    f"{department_label} | {item['lecture_name']} "
+                    f"{department_label}・{grade_label} | {item['lecture_name']} "
                     f"- {item['professor_name']}教授"
                 )
                 with st.expander(title, expanded=False):
                     st.markdown(f"**学科：** {department_label}")
+                    st.markdown(f"**学年：** {grade_label}")
                     col1, col2 = st.columns(2)
                     with col1:
                         st.markdown("**指定教科書**")

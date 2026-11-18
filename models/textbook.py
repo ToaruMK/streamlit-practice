@@ -19,6 +19,7 @@ def _normalize_record(record):
     normalized = {
         "id": str(record.get("id", "")).strip(),
         "department": str(record.get("department", record.get("学科", ""))).strip(),
+        "grade": str(record.get("grade", record.get("学年", ""))).strip(),
         "lecture_name": str(record.get("lecture_name", record.get("講義名", ""))).strip(),
         "professor_name": str(record.get("professor_name", record.get("教授名", ""))).strip(),
         "required_textbook": str(
@@ -100,12 +101,14 @@ def add_textbook(
     reference_book="",
     path=None,
     department="",
+    grade="",
 ):
     """教科書情報を検証して追加する。"""
     record = _normalize_record(
         {
             "id": str(uuid.uuid4()),
             "department": department,
+            "grade": grade,
             "lecture_name": lecture_name,
             "professor_name": professor_name,
             "required_textbook": required_textbook,

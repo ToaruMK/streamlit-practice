@@ -1,1 +1,11 @@
-[]
+[
+  {
+    "id": "2395505e-1ce0-4679-abe6-1703358f7fd0",
+    "department": "化学・生命",
+    "lecture_name": "有機化学Ⅰ",
+    "professor_name": "星野雄二郎",
+    "required_textbook": "マクナリー有機化学",
+    "reference_book": "",
+    "comments": []
+  }
+]
