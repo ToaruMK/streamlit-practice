@@ -1,5 +1,6 @@
 import json
 import importlib.util
+import uuid
 from pathlib import Path
 
 import streamlit as st
@@ -17,6 +18,8 @@ add_comment = textbook_model.add_comment
 add_textbook = textbook_model.add_textbook
 like_comment = textbook_model.like_comment
 load_textbooks = textbook_model.load_textbooks
+rate_textbook = textbook_model.rate_textbook
+rating_summary = textbook_model.rating_summary
 
 DEPARTMENTS = [
     "教育",
@@ -36,6 +39,18 @@ DEPARTMENTS = [
     "環境リスク",
 ]
 GRADES = ["1年", "2年", "3年", "4年"]
+RATING_CHOICES = [
+    "評価しない",
+    "★☆☆☆☆",
+    "★★☆☆☆",
+    "★★★☆☆",
+    "★★★★☆",
+    "★★★★★",
+]
+
+
+def _rating_value(choice):
+    return RATING_CHOICES.index(choice) if choice != RATING_CHOICES[0] else None
 
 st.set_page_config(
     page_title="横浜国立大学 教科書レビュー",
@@ -45,6 +60,10 @@ st.set_page_config(
 
 st.title("横浜国立大学 教科書レビュー")
 st.caption("講義と教授名を登録し、指定教科書と市販参考書を共有できます")
+
+if "rating_voter_id" not in st.session_state:
+    st.session_state["rating_voter_id"] = str(uuid.uuid4())
+voter_id = st.session_state["rating_voter_id"]
 
 tab_list, tab_add = st.tabs(["教科書一覧", "教科書を追加"])
 
@@ -74,6 +93,19 @@ with tab_add:
                 placeholder="授業で使える参考書",
             )
 
+        st.caption("評価は任意です。星が多いほど高評価です。")
+        rating_col1, rating_col2 = st.columns(2)
+        with rating_col1:
+            initial_clarity = st.selectbox(
+                "わかりやすさ（任意）",
+                RATING_CHOICES,
+            )
+        with rating_col2:
+            initial_frequency = st.selectbox(
+                "使う頻度（任意）",
+                RATING_CHOICES,
+            )
+
         submitted = st.form_submit_button("追加する", use_container_width=True)
 
         if submitted:
@@ -85,6 +117,9 @@ with tab_add:
                     reference_book,
                     department=department,
                     grade=grade,
+                    clarity_rating=_rating_value(initial_clarity),
+                    frequency_rating=_rating_value(initial_frequency),
+                    voter_id=voter_id,
                 )
                 st.success("教科書情報を追加しました")
                 st.rerun()
@@ -158,6 +193,78 @@ with tab_list:
                 with st.expander(title, expanded=False):
                     st.markdown(f"**学科：** {department_label}")
                     st.markdown(f"**学年：** {grade_label}")
+
+                    rating_col1, rating_col2 = st.columns(2)
+                    for column, metric, label in (
+                        (rating_col1, "clarity", "わかりやすさ"),
+                        (rating_col2, "frequency", "使う頻度"),
+                    ):
+                        summary = rating_summary(item, metric)
+                        average = (
+                            f"★ {summary['average']:.1f} / 5"
+                            if summary["average"] is not None
+                            else "評価なし"
+                        )
+                        column.metric(label, average)
+                        column.caption(f"評価した人数：{summary['count']}人")
+
+                    with st.form(key=f"rating-form-{item['id']}"):
+                        current_ratings = item["ratings"]
+                        current_clarity = next(
+                            (
+                                vote["value"]
+                                for vote in current_ratings["clarity"]
+                                if vote["voter_id"] == voter_id
+                            ),
+                            None,
+                        )
+                        current_frequency = next(
+                            (
+                                vote["value"]
+                                for vote in current_ratings["frequency"]
+                                if vote["voter_id"] == voter_id
+                            ),
+                            None,
+                        )
+                        rating_col1, rating_col2 = st.columns(2)
+                        with rating_col1:
+                            clarity_choice = st.selectbox(
+                                "わかりやすさを評価",
+                                RATING_CHOICES,
+                                index=current_clarity or 0,
+                                key=f"clarity-rating-{item['id']}",
+                            )
+                        with rating_col2:
+                            frequency_choice = st.selectbox(
+                                "使う頻度を評価",
+                                RATING_CHOICES,
+                                index=current_frequency or 0,
+                                key=f"frequency-rating-{item['id']}",
+                            )
+                        if st.form_submit_button("評価を保存"):
+                            try:
+                                submitted_ratings = 0
+                                for metric, choice in (
+                                    ("clarity", clarity_choice),
+                                    ("frequency", frequency_choice),
+                                ):
+                                    value = _rating_value(choice)
+                                    if value is not None:
+                                        rate_textbook(
+                                            item["id"],
+                                            metric,
+                                            value,
+                                            voter_id,
+                                        )
+                                        submitted_ratings += 1
+                                if submitted_ratings:
+                                    st.success("評価を保存しました")
+                                    st.rerun()
+                                else:
+                                    st.info("星を選んでから評価を保存してください")
+                            except (ValueError, OSError) as error:
+                                st.error(str(error))
+
                     col1, col2 = st.columns(2)
                     with col1:
                         st.markdown("**指定教科書**")
