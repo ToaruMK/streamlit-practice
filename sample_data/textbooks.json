@@ -1,6 +1,7 @@
 [
   {
     "id": "2395505e-1ce0-4679-abe6-1703358f7fd0",
+    "creator_id": "c0294bce-0216-41eb-9dd6-d881a42ea91b",
     "department": [
       "化学・生命"
     ],
@@ -19,6 +20,35 @@
       "frequency": [
         {
           "voter_id": "c0294bce-0216-41eb-9dd6-d881a42ea91b",
+          "value": 2
+        }
+      ]
+    },
+    "comments": []
+  },
+  {
+    "id": "c3b3ff2d-b4b0-4d55-b754-9bdffae516a7",
+    "creator_id": "17e1430f-bdf1-4c3a-94ff-030633b6194a",
+    "department": [
+      "化学・生命"
+    ],
+    "grade": [
+      "1年"
+    ],
+    "lecture_name": "物理化学Ⅰ",
+    "professor_name": "児島長次郎",
+    "required_textbook": "アトキンス物理化学",
+    "reference_book": "",
+    "ratings": {
+      "clarity": [
+        {
+          "voter_id": "17e1430f-bdf1-4c3a-94ff-030633b6194a",
+          "value": 4
+        }
+      ],
+      "frequency": [
+        {
+          "voter_id": "17e1430f-bdf1-4c3a-94ff-030633b6194a",
           "value": 2
         }
       ]

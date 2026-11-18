@@ -66,6 +66,22 @@ if "rating_voter_id" not in st.session_state:
     st.session_state["rating_voter_id"] = str(uuid.uuid4())
 voter_id = st.session_state["rating_voter_id"]
 
+try:
+    textbooks = load_textbooks()
+except (json.JSONDecodeError, OSError, ValueError) as error:
+    textbooks = []
+    st.error(f"教科書データを読み込めませんでした：{error}")
+
+professor_suggestions = sorted(
+    {item["professor_name"] for item in textbooks if item["professor_name"]}
+)
+required_book_suggestions = sorted(
+    {item["required_textbook"] for item in textbooks if item["required_textbook"]}
+)
+reference_book_suggestions = sorted(
+    {item["reference_book"] for item in textbooks if item["reference_book"]}
+)
+
 tab_list, tab_add = st.tabs(["教科書一覧", "教科書を追加"])
 
 with tab_add:
@@ -77,21 +93,30 @@ with tab_add:
             "授業名（必須）",
             placeholder="例：線形代数学",
         )
-        professor_name = st.text_input(
+        professor_name = st.selectbox(
             "教授名（必須）",
-            placeholder="例：山田 太郎",
+            professor_suggestions,
+            index=None,
+            accept_new_options=True,
+            placeholder="入力するか、過去の登録候補から選択",
         )
 
         col1, col2 = st.columns(2)
         with col1:
-            required_textbook = st.text_input(
+            required_textbook = st.selectbox(
                 "指定教科書名（必須）",
-                placeholder="授業で指定された教科書",
+                required_book_suggestions,
+                index=None,
+                accept_new_options=True,
+                placeholder="入力するか、過去の登録候補から選択",
             )
         with col2:
-            reference_book = st.text_input(
+            reference_book = st.selectbox(
                 "市販参考書",
-                placeholder="授業で使える参考書",
+                reference_book_suggestions,
+                index=None,
+                accept_new_options=True,
+                placeholder="入力するか、過去の登録候補から選択",
             )
 
         st.caption("評価は任意です。星が多いほど高評価です。")
@@ -113,9 +138,9 @@ with tab_add:
             try:
                 add_textbook(
                     lecture_name,
-                    professor_name,
-                    required_textbook,
-                    reference_book,
+                    professor_name or "",
+                    required_textbook or "",
+                    reference_book or "",
                     department=department,
                     grade=grade,
                     clarity_rating=_rating_value(initial_clarity),
@@ -128,12 +153,6 @@ with tab_add:
                 st.error(str(error))
 
 with tab_list:
-    try:
-        textbooks = load_textbooks()
-    except (json.JSONDecodeError, OSError, ValueError) as error:
-        textbooks = []
-        st.error(f"教科書データを読み込めませんでした：{error}")
-
     selected_departments = st.multiselect(
         "学科で絞り込む（複数選択可）",
         DEPARTMENTS,
