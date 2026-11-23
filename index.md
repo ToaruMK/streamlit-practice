@@ -13,8 +13,4 @@
 
 ## レビューサイトを開く
 
-レビュー投稿・評価機能はGitHub Pagesでは動作しません。Streamlitアプリを公開して利用してください。
-
-[Streamlit Cloudでこのアプリをデプロイする](https://share.streamlit.io/deploy?repository=ToaruMK/streamlit-practice&branch=main&mainModule=app.py)
-
-デプロイ後は、発行されたStreamlitアプリのURLから教科書レビュー機能を利用できます。
+[教科書レビューサイトを開く](https://app-practice-jyjfcmbwj5gibrj6rpxzhd.streamlit.app/textbook_pages)

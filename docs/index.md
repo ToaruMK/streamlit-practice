@@ -23,10 +23,4 @@
 
 ## レビューサイトを開く
 
-レビュー機能を使うには、Streamlitアプリの公開が必要です。まだ公開されていない場合は、次のリンクからStreamlit Community Cloudでこのリポジトリをデプロイしてください。
-
-[Streamlit Cloudでアプリをデプロイする](https://share.streamlit.io/deploy?repository=ToaruMK/streamlit-practice&branch=main&mainModule=app.py)
-
-デプロイ時はリポジトリ `ToaruMK/streamlit-practice`、ブランチ `main`、メインファイル `app.py` を指定します。公開後は、発行されたStreamlitアプリのURLからレビューサイトを利用できます。
-
-> GitHub Pagesは案内ページを公開する場所です。レビュー投稿・評価機能はGitHub Pages上では動作せず、Streamlitアプリ上で動作します。
+[教科書レビューサイトを開く](https://app-practice-jyjfcmbwj5gibrj6rpxzhd.streamlit.app/textbook_pages)
