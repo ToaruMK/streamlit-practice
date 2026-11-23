@@ -498,19 +498,6 @@ except (json.JSONDecodeError, OSError, ValueError) as error:
     textbooks = []
     st.error(f"教科書データを読み込めませんでした：{error}")
 
-professor_suggestions = sorted(
-    {item["professor_name"] for item in textbooks if item["professor_name"]}
-)
-lecture_suggestions = sorted(
-    {item["lecture_name"] for item in textbooks if item["lecture_name"]}
-)
-required_book_suggestions = sorted(
-    {item["required_textbook"] for item in textbooks if item["required_textbook"]}
-)
-reference_book_suggestions = sorted(
-    {item["reference_book"] for item in textbooks if item["reference_book"]}
-)
-
 tab_list, tab_add = st.tabs(["教科書一覧", "教科書を追加"])
 
 with tab_add:
@@ -519,37 +506,25 @@ with tab_add:
     with st.form("textbook_form", clear_on_submit=True):
         department = st.multiselect("学科（必須・複数選択可）", DEPARTMENTS)
         grade = st.multiselect("学年（必須・複数選択可）", GRADES)
-        lecture_name = st.selectbox(
+        lecture_name = st.text_input(
             "授業名（必須）",
-            lecture_suggestions,
-            index=None,
-            accept_new_options=True,
-            placeholder="入力するか、過去の登録候補から選択",
+            placeholder="授業名を入力",
         )
-        professor_name = st.selectbox(
+        professor_name = st.text_input(
             "教授名（必須）",
-            professor_suggestions,
-            index=None,
-            accept_new_options=True,
-            placeholder="入力するか、過去の登録候補から選択",
+            placeholder="教授名を入力",
         )
 
         col1, col2 = st.columns(2)
         with col1:
-            required_textbook = st.selectbox(
+            required_textbook = st.text_input(
                 "指定教科書名",
-                required_book_suggestions,
-                index=None,
-                accept_new_options=True,
-                placeholder="入力するか、過去の登録候補から選択",
+                placeholder="指定教科書名を入力",
             )
         with col2:
-            reference_book = st.selectbox(
+            reference_book = st.text_input(
                 "市販参考書",
-                reference_book_suggestions,
-                index=None,
-                accept_new_options=True,
-                placeholder="入力するか、過去の登録候補から選択",
+                placeholder="市販参考書を入力",
             )
 
         st.markdown("**教科書ごとのわかりやすさ（任意）**")
