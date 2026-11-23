@@ -105,7 +105,7 @@ def _render_book_rating(item, book_type, metric, metric_label, voter_id):
                         )
                         st.success(f"{metric_label}を保存しました")
                         st.rerun()
-                    except (ValueError, OSError) as error:
+                    except (ValueError, OSError, RuntimeError) as error:
                         st.error(str(error))
 
 
@@ -141,7 +141,7 @@ def _render_book_reviews(item, book_type, book_label):
                             like_comment(item["id"], comment["id"])
                             st.session_state[vote_key] = True
                             st.rerun()
-                        except (ValueError, OSError) as error:
+                        except (ValueError, OSError, RuntimeError) as error:
                             st.error(str(error))
         else:
             st.caption(f"『{book_label}』のレビューはまだありません")
@@ -171,7 +171,7 @@ def _render_book_reviews(item, book_type, book_label):
                     )
                     st.success(f"『{book_label}』のレビューを投稿しました")
                     st.rerun()
-                except (ValueError, OSError) as error:
+                except (ValueError, OSError, RuntimeError) as error:
                     st.error(str(error))
 
 
@@ -494,7 +494,7 @@ voter_id = st.session_state["rating_voter_id"]
 
 try:
     textbooks = load_textbooks()
-except (json.JSONDecodeError, OSError, ValueError) as error:
+except (json.JSONDecodeError, OSError, ValueError, RuntimeError) as error:
     textbooks = []
     st.error(f"教科書データを読み込めませんでした：{error}")
 
@@ -544,7 +544,7 @@ with tab_add:
                     )
                 ),
             )
-        except (ValueError, OSError) as error:
+        except (ValueError, OSError, RuntimeError) as error:
             st.session_state["add_result"] = ("error", str(error))
             return
 
@@ -796,7 +796,7 @@ with tab_list:
                                     )
                                     st.success("登録情報を更新しました")
                                     st.rerun()
-                                except (ValueError, OSError) as error:
+                                except (ValueError, OSError, RuntimeError) as error:
                                     st.error(str(error))
 
                     col1, col2 = st.columns(2)

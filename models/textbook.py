@@ -4,9 +4,14 @@ import tempfile
 import uuid
 from pathlib import Path
 from threading import Lock
+from urllib.error import HTTPError, URLError
+from urllib.parse import urlencode
+from urllib.request import Request, urlopen
 
 
 DATA_FILE = Path(__file__).parent.parent / "sample_data" / "textbooks.json"
+SUPABASE_TABLE = "textbook_store"
+SUPABASE_RECORD_ID = "main"
 _write_lock = Lock()
 
 
@@ -156,9 +161,85 @@ def _normalize_record(record):
     return normalized
 
 
-def load_textbooks(path=None):
-    """JSONファイルから教科書情報を読み込む。ファイルがない場合は空リストを返す。"""
-    data_path = Path(path) if path is not None else DATA_FILE
+def _storage_backend(path):
+    if path is not None:
+        return "json"
+
+    storage_config = _get_streamlit_secret("textbook_storage")
+    backend = storage_config.get("backend")
+    if backend not in ("json", "supabase"):
+        raise RuntimeError(
+            "保存先が設定されていません。Streamlit Secretsで"
+            "[textbook_storage] backend = \"supabase\" を設定してください。"
+        )
+    return backend
+
+
+def _get_streamlit_secret(section):
+    import streamlit as st
+
+    try:
+        return st.secrets.get(section, {})
+    except FileNotFoundError as error:
+        raise RuntimeError(
+            "Streamlit Secretsが見つかりません。"
+            "CloudではSupabase接続設定を登録してください。"
+        ) from error
+
+
+def _supabase_credentials():
+    config = _get_streamlit_secret("supabase")
+    url = str(config.get("url", "")).strip().rstrip("/")
+    key = str(config.get("service_role_key", "")).strip()
+    if not url or not key:
+        raise RuntimeError(
+            "Supabaseの接続情報が設定されていません。"
+            "Streamlit Secretsにurlとservice_role_keyを設定してください。"
+        )
+    if not url.startswith("https://"):
+        raise RuntimeError("Supabaseのurlにはhttps://のURLを指定してください。")
+    return url, key
+
+
+def _supabase_request(method, query, payload=None):
+    url, key = _supabase_credentials()
+    body = (
+        json.dumps(payload, ensure_ascii=False).encode("utf-8")
+        if payload is not None
+        else None
+    )
+    request = Request(
+        f"{url}/rest/v1/{SUPABASE_TABLE}?{query}",
+        data=body,
+        method=method,
+        headers={
+            "apikey": key,
+            "Authorization": f"Bearer {key}",
+            "Content-Type": "application/json",
+            "Prefer": "resolution=merge-duplicates,return=minimal",
+        },
+    )
+    try:
+        with urlopen(request, timeout=15) as response:
+            response_body = response.read()
+    except HTTPError as error:
+        detail = error.read().decode("utf-8", errors="replace")
+        raise OSError(
+            f"Supabaseへの保存・読み込みに失敗しました ({error.code}): {detail}"
+        ) from error
+    except URLError as error:
+        raise OSError(f"Supabaseに接続できません: {error.reason}") from error
+
+    if not response_body:
+        return None
+    try:
+        return json.loads(response_body.decode("utf-8"))
+    except json.JSONDecodeError as error:
+        raise ValueError("Supabaseから不正なJSON応答が返されました") from error
+
+
+def _load_json_textbooks(path):
+    data_path = Path(path)
     if not data_path.exists():
         return []
 
@@ -170,12 +251,42 @@ def load_textbooks(path=None):
     return [_normalize_record(record) for record in data]
 
 
+def load_textbooks(path=None):
+    """永続DBまたは指定JSONファイルから教科書情報を読み込む。"""
+    backend = _storage_backend(path)
+    if backend == "json":
+        return _load_json_textbooks(path if path is not None else DATA_FILE)
+
+    query = urlencode({"id": f"eq.{SUPABASE_RECORD_ID}", "select": "records"})
+    response = _supabase_request("GET", query)
+    if not isinstance(response, list):
+        raise ValueError("Supabaseから不正な教科書データが返されました")
+    if response:
+        records = response[0].get("records")
+        if not isinstance(records, list):
+            raise ValueError("Supabaseの教科書データはJSON配列で保存してください")
+        return [_normalize_record(record) for record in records]
+
+    seed_records = _load_json_textbooks(DATA_FILE)
+    save_textbooks(seed_records)
+    return seed_records
+
+
 def save_textbooks(records, path=None):
-    """教科書情報をアトミックにJSONへ保存する。"""
-    data_path = Path(path) if path is not None else DATA_FILE
-    data_path.parent.mkdir(parents=True, exist_ok=True)
+    """教科書情報を永続DBまたは指定JSONファイルに保存する。"""
+    backend = _storage_backend(path)
     normalized = [_normalize_record(record) for record in records]
 
+    if backend == "supabase":
+        _supabase_request(
+            "POST",
+            "on_conflict=id",
+            {"id": SUPABASE_RECORD_ID, "records": normalized},
+        )
+        return normalized
+
+    data_path = Path(path) if path is not None else DATA_FILE
+    data_path.parent.mkdir(parents=True, exist_ok=True)
     with _write_lock:
         fd, temp_name = tempfile.mkstemp(
             dir=str(data_path.parent), prefix=".textbooks-", suffix=".json"

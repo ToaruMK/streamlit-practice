@@ -4,4 +4,5 @@ theme:
  name: mkdocs
 nav:
  - 教科書レビューの案内: index.md
+ - データ保存の設定: storage_setup.md
 repo_url: https://github.com/ToaruMK/streamlit-practice
