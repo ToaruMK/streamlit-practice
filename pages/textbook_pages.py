@@ -516,6 +516,56 @@ tab_list, tab_add = st.tabs(["教科書一覧", "教科書を追加"])
 with tab_add:
     st.subheader("新しい情報を追加")
     st.caption("同じ授業名・教授名の登録がある場合は、既存情報に統合されます。")
+
+    def _submit_textbook():
+        try:
+            add_textbook(
+                st.session_state.get("add_lecture_name") or "",
+                st.session_state.get("add_professor_name") or "",
+                st.session_state.get("add_required_textbook") or "",
+                st.session_state.get("add_reference_book") or "",
+                department=st.session_state.get("add_department", []),
+                grade=st.session_state.get("add_grade", []),
+                clarity_rating=_rating_value(
+                    st.session_state.get("add_initial_clarity", RATING_CHOICES[0])
+                ),
+                frequency_rating=_rating_value(
+                    st.session_state.get("add_initial_frequency", RATING_CHOICES[0])
+                ),
+                voter_id=voter_id,
+                reference_clarity_rating=_rating_value(
+                    st.session_state.get(
+                        "add_initial_reference_clarity", RATING_CHOICES[0]
+                    )
+                ),
+                reference_frequency_rating=_rating_value(
+                    st.session_state.get(
+                        "add_initial_reference_frequency", RATING_CHOICES[0]
+                    )
+                ),
+            )
+        except (ValueError, OSError) as error:
+            st.session_state["add_result"] = ("error", str(error))
+            return
+
+        for key, value in (
+            ("add_department", []),
+            ("add_grade", []),
+            ("add_lecture_name", None),
+            ("add_professor_name", None),
+            ("add_required_textbook", None),
+            ("add_reference_book", None),
+            ("add_initial_clarity", RATING_CHOICES[0]),
+            ("add_initial_reference_clarity", RATING_CHOICES[0]),
+            ("add_initial_frequency", RATING_CHOICES[0]),
+            ("add_initial_reference_frequency", RATING_CHOICES[0]),
+        ):
+            st.session_state[key] = value
+        st.session_state["add_result"] = (
+            "success",
+            "教科書情報を追加しました。入力欄をクリアしました。",
+        )
+
     department = st.multiselect(
         "学科（必須・複数選択可）",
         DEPARTMENTS,
@@ -612,25 +662,19 @@ with tab_add:
             key="add_initial_reference_frequency",
         )
 
-    if st.button("追加する", use_container_width=True, key="add_textbook_button"):
-        try:
-            add_textbook(
-                lecture_name or "",
-                professor_name or "",
-                required_textbook or "",
-                reference_book or "",
-                department=department,
-                grade=grade,
-                clarity_rating=_rating_value(initial_clarity),
-                frequency_rating=_rating_value(initial_frequency),
-                voter_id=voter_id,
-                reference_clarity_rating=_rating_value(initial_reference_clarity),
-                reference_frequency_rating=_rating_value(initial_reference_frequency),
-            )
-            st.success("教科書情報を追加しました")
-            st.rerun()
-        except (ValueError, OSError) as error:
-            st.error(str(error))
+    st.button(
+        "追加する",
+        use_container_width=True,
+        key="add_textbook_button",
+        on_click=_submit_textbook,
+    )
+    add_result = st.session_state.pop("add_result", None)
+    if add_result:
+        result_type, message = add_result
+        if result_type == "success":
+            st.success(message)
+        else:
+            st.error(message)
 
 with tab_list:
     selected_departments = st.multiselect(
