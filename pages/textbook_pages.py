@@ -119,7 +119,7 @@ def _render_book_reviews(item, book_type, book_label):
         key=lambda comment: (-comment["likes"], comment["id"]),
     )
     with st.expander(
-        f"{book_label}のレビューを見る・投稿する（{len(comments)}件）",
+        f"『{book_label}』のレビューを見る・投稿する（{len(comments)}件）",
         expanded=False,
     ):
         if comments:
@@ -144,7 +144,7 @@ def _render_book_reviews(item, book_type, book_label):
                         except (ValueError, OSError) as error:
                             st.error(str(error))
         else:
-            st.caption("この教科書のレビューはまだありません")
+            st.caption(f"『{book_label}』のレビューはまだありません")
 
         st.info(
             "使う頻度（毎回・試験前など）、新品がよいか中古でもよいか、"
@@ -155,7 +155,7 @@ def _render_book_reviews(item, book_type, book_label):
             clear_on_submit=True,
         ):
             comment_text = st.text_area(
-                f"{book_label}のレビューを書く",
+                f"『{book_label}』のレビューを書く",
                 placeholder=(
                     "例：毎回の授業で使います。書き込みがなければ中古で十分です。"
                     "説明がわかりやすく、予習にも役立ちました。"
@@ -169,7 +169,7 @@ def _render_book_reviews(item, book_type, book_label):
                         comment_text,
                         book_type=book_type,
                     )
-                    st.success(f"{book_label}のレビューを投稿しました")
+                    st.success(f"『{book_label}』のレビューを投稿しました")
                     st.rerun()
                 except (ValueError, OSError) as error:
                     st.error(str(error))
@@ -761,7 +761,7 @@ with tab_list:
                         _render_book_reviews(
                             item,
                             "required_textbook",
-                            "指定教科書",
+                            item["required_textbook"] or "指定教科書（未登録）",
                         )
 
                     with col2:
@@ -793,7 +793,7 @@ with tab_list:
                             _render_book_reviews(
                                 item,
                                 "reference_book",
-                                "市販参考書",
+                                item["reference_book"],
                             )
                         else:
                             st.caption("市販参考書は未登録です")

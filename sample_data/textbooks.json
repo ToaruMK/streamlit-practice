@@ -34,6 +34,15 @@
           }
         ],
         "reference_book": []
+      },
+      "book_frequency": {
+        "required_textbook": [
+          {
+            "voter_id": "c0294bce-0216-41eb-9dd6-d881a42ea91b",
+            "value": 2
+          }
+        ],
+        "reference_book": []
       }
     },
     "comments": []
@@ -88,18 +97,33 @@
           }
         ],
         "reference_book": []
+      },
+      "book_frequency": {
+        "required_textbook": [
+          {
+            "voter_id": "17e1430f-bdf1-4c3a-94ff-030633b6194a",
+            "value": 2
+          },
+          {
+            "voter_id": "b76787c0-e878-4e20-b7f5-c1b94c659297",
+            "value": 5
+          }
+        ],
+        "reference_book": []
       }
     },
     "comments": [
       {
         "id": "5c5242d7-71b7-4b88-b02e-26df7010fa5e",
         "text": "使える",
-        "likes": 1
+        "likes": 2,
+        "book_type": "required_textbook"
       },
       {
         "id": "6a0e7f40-205c-473b-a97c-3cb71e80e045",
         "text": "まあまあ",
-        "likes": 0
+        "likes": 1,
+        "book_type": "required_textbook"
       }
     ]
   }
