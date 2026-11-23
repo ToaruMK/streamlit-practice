@@ -503,100 +503,119 @@ tab_list, tab_add = st.tabs(["教科書一覧", "教科書を追加"])
 with tab_add:
     st.subheader("新しい情報を追加")
     st.caption("同じ授業名・教授名の登録がある場合は、既存情報に統合されます。")
-    with st.form("textbook_form", clear_on_submit=True):
-        department = st.multiselect("学科（必須・複数選択可）", DEPARTMENTS)
-        grade = st.multiselect("学年（必須・複数選択可）", GRADES)
-        lecture_name = st.text_input(
-            "授業名（必須）",
-            placeholder="授業名を入力",
+    department_text = st.text_input(
+        "学科（必須・カンマ区切り可）",
+        placeholder="例：教育,経済",
+        key="add_department",
+    )
+    grade_text = st.text_input(
+        "学年（必須・カンマ区切り可）",
+        placeholder="例：1年,2年",
+        key="add_grade",
+    )
+    lecture_name = st.text_input(
+        "授業名（必須）",
+        placeholder="授業名を入力",
+        key="add_lecture_name",
+    )
+    professor_name = st.text_input(
+        "教授名（必須）",
+        placeholder="教授名を入力",
+        key="add_professor_name",
+    )
+
+    col1, col2 = st.columns(2)
+    with col1:
+        required_textbook = st.text_input(
+            "指定教科書名",
+            placeholder="指定教科書名を入力",
+            key="add_required_textbook",
         )
-        professor_name = st.text_input(
-            "教授名（必須）",
-            placeholder="教授名を入力",
+    with col2:
+        reference_book = st.text_input(
+            "市販参考書",
+            placeholder="市販参考書を入力",
+            key="add_reference_book",
         )
 
-        col1, col2 = st.columns(2)
-        with col1:
-            required_textbook = st.text_input(
-                "指定教科書名",
-                placeholder="指定教科書名を入力",
-            )
-        with col2:
-            reference_book = st.text_input(
-                "市販参考書",
-                placeholder="市販参考書を入力",
-            )
+    st.markdown("**教科書ごとのわかりやすさ（任意）**")
+    clarity_col1, clarity_col2 = st.columns(2)
+    with clarity_col1:
+        initial_clarity = st.selectbox(
+            (
+                f"『{required_textbook}』のわかりやすさ"
+                if required_textbook
+                else "指定教科書のわかりやすさ"
+            ),
+            RATING_CHOICES,
+            disabled=not required_textbook,
+            key="add_initial_clarity",
+        )
+    with clarity_col2:
+        initial_reference_clarity = st.selectbox(
+            (
+                f"『{reference_book}』のわかりやすさ"
+                if reference_book
+                else "市販参考書のわかりやすさ"
+            ),
+            RATING_CHOICES,
+            disabled=not reference_book,
+            key="add_initial_reference_clarity",
+        )
+    st.markdown("**教科書ごとの授業での使用頻度（任意）**")
+    frequency_col1, frequency_col2 = st.columns(2)
+    with frequency_col1:
+        initial_frequency = st.selectbox(
+            (
+                f"『{required_textbook}』の使用頻度"
+                if required_textbook
+                else "指定教科書の使用頻度"
+            ),
+            RATING_CHOICES,
+            disabled=not required_textbook,
+            key="add_initial_frequency",
+        )
+    with frequency_col2:
+        initial_reference_frequency = st.selectbox(
+            (
+                f"『{reference_book}』の使用頻度"
+                if reference_book
+                else "市販参考書の使用頻度"
+            ),
+            RATING_CHOICES,
+            disabled=not reference_book,
+            key="add_initial_reference_frequency",
+        )
 
-        st.markdown("**教科書ごとのわかりやすさ（任意）**")
-        clarity_col1, clarity_col2 = st.columns(2)
-        with clarity_col1:
-            initial_clarity = st.selectbox(
-                (
-                    f"『{required_textbook}』のわかりやすさ"
-                    if required_textbook
-                    else "指定教科書のわかりやすさ"
-                ),
-                RATING_CHOICES,
-                disabled=not required_textbook,
+    if st.button("追加する", use_container_width=True, key="add_textbook_button"):
+        department = [
+            value.strip()
+            for value in department_text.replace("、", ",").replace("，", ",").split(",")
+            if value.strip()
+        ]
+        grade = [
+            value.strip()
+            for value in grade_text.replace("、", ",").replace("，", ",").split(",")
+            if value.strip()
+        ]
+        try:
+            add_textbook(
+                lecture_name or "",
+                professor_name or "",
+                required_textbook or "",
+                reference_book or "",
+                department=department,
+                grade=grade,
+                clarity_rating=_rating_value(initial_clarity),
+                frequency_rating=_rating_value(initial_frequency),
+                voter_id=voter_id,
+                reference_clarity_rating=_rating_value(initial_reference_clarity),
+                reference_frequency_rating=_rating_value(initial_reference_frequency),
             )
-        with clarity_col2:
-            initial_reference_clarity = st.selectbox(
-                (
-                    f"『{reference_book}』のわかりやすさ"
-                    if reference_book
-                    else "市販参考書のわかりやすさ"
-                ),
-                RATING_CHOICES,
-                disabled=not reference_book,
-            )
-        st.markdown("**教科書ごとの授業での使用頻度（任意）**")
-        frequency_col1, frequency_col2 = st.columns(2)
-        with frequency_col1:
-            initial_frequency = st.selectbox(
-                (
-                    f"『{required_textbook}』の使用頻度"
-                    if required_textbook
-                    else "指定教科書の使用頻度"
-                ),
-                RATING_CHOICES,
-                disabled=not required_textbook,
-            )
-        with frequency_col2:
-            initial_reference_frequency = st.selectbox(
-                (
-                    f"『{reference_book}』の使用頻度"
-                    if reference_book
-                    else "市販参考書の使用頻度"
-                ),
-                RATING_CHOICES,
-                disabled=not reference_book,
-            )
-
-        submitted = st.form_submit_button("追加する", use_container_width=True)
-
-        if submitted:
-            try:
-                add_textbook(
-                    lecture_name or "",
-                    professor_name or "",
-                    required_textbook or "",
-                    reference_book or "",
-                    department=department,
-                    grade=grade,
-                    clarity_rating=_rating_value(initial_clarity),
-                    frequency_rating=_rating_value(initial_frequency),
-                    voter_id=voter_id,
-                    reference_clarity_rating=_rating_value(
-                        initial_reference_clarity
-                    ),
-                    reference_frequency_rating=_rating_value(
-                        initial_reference_frequency
-                    ),
-                )
-                st.success("教科書情報を追加しました")
-                st.rerun()
-            except (ValueError, OSError) as error:
-                st.error(str(error))
+            st.success("教科書情報を追加しました")
+            st.rerun()
+        except (ValueError, OSError) as error:
+            st.error(str(error))
 
 with tab_list:
     selected_departments = st.multiselect(
@@ -663,22 +682,14 @@ with tab_list:
                     if item["creator_id"] == voter_id:
                         with st.form(key=f"edit-form-{item['id']}"):
                             st.markdown("**登録情報を編集**")
-                            edited_departments = st.multiselect(
-                                "学科",
-                                DEPARTMENTS,
-                                default=[
-                                    department
-                                    for department in item["department"]
-                                    if department in DEPARTMENTS
-                                ],
+                            edited_departments_text = st.text_input(
+                                "学科（カンマ区切り可）",
+                                value=",".join(item["department"]),
                                 key=f"edit-department-{item['id']}",
                             )
-                            edited_grades = st.multiselect(
-                                "学年",
-                                GRADES,
-                                default=[
-                                    grade for grade in item["grade"] if grade in GRADES
-                                ],
+                            edited_grades_text = st.text_input(
+                                "学年（カンマ区切り可）",
+                                value=",".join(item["grade"]),
                                 key=f"edit-grade-{item['id']}",
                             )
                             edited_lecture_name = st.text_input(
@@ -706,6 +717,22 @@ with tab_list:
                                 use_container_width=True,
                             ):
                                 try:
+                                    edited_departments = [
+                                        value.strip()
+                                        for value in edited_departments_text
+                                        .replace("、", ",")
+                                        .replace("，", ",")
+                                        .split(",")
+                                        if value.strip()
+                                    ]
+                                    edited_grades = [
+                                        value.strip()
+                                        for value in edited_grades_text
+                                        .replace("、", ",")
+                                        .replace("，", ",")
+                                        .split(",")
+                                        if value.strip()
+                                    ]
                                     update_textbook(
                                         item["id"],
                                         voter_id,
