@@ -1,7 +1,7 @@
-site_name: making game 1
+site_name: 横浜国立大学 教科書レビュー
 site_url: https://ToaruMK.github.io/streamlit-practice/
 theme:
  name: mkdocs
 nav:
- - Home: index.md
+ - 教科書レビューの案内: index.md
 repo_url: https://github.com/ToaruMK/streamlit-practice
