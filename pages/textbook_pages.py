@@ -537,7 +537,7 @@ with tab_add:
         col1, col2 = st.columns(2)
         with col1:
             required_textbook = st.selectbox(
-                "指定教科書名（必須）",
+                "指定教科書名",
                 required_book_suggestions,
                 index=None,
                 accept_new_options=True,
@@ -556,25 +556,45 @@ with tab_add:
         clarity_col1, clarity_col2 = st.columns(2)
         with clarity_col1:
             initial_clarity = st.selectbox(
-                "指定教科書のわかりやすさ",
+                (
+                    f"『{required_textbook}』のわかりやすさ"
+                    if required_textbook
+                    else "指定教科書のわかりやすさ"
+                ),
                 RATING_CHOICES,
+                disabled=not required_textbook,
             )
         with clarity_col2:
             initial_reference_clarity = st.selectbox(
-                "市販参考書のわかりやすさ",
+                (
+                    f"『{reference_book}』のわかりやすさ"
+                    if reference_book
+                    else "市販参考書のわかりやすさ"
+                ),
                 RATING_CHOICES,
+                disabled=not reference_book,
             )
         st.markdown("**教科書ごとの授業での使用頻度（任意）**")
         frequency_col1, frequency_col2 = st.columns(2)
         with frequency_col1:
             initial_frequency = st.selectbox(
-                "指定教科書を授業で使う頻度",
+                (
+                    f"『{required_textbook}』の使用頻度"
+                    if required_textbook
+                    else "指定教科書の使用頻度"
+                ),
                 RATING_CHOICES,
+                disabled=not required_textbook,
             )
         with frequency_col2:
             initial_reference_frequency = st.selectbox(
-                "市販参考書を授業で使う頻度",
+                (
+                    f"『{reference_book}』の使用頻度"
+                    if reference_book
+                    else "市販参考書の使用頻度"
+                ),
                 RATING_CHOICES,
+                disabled=not reference_book,
             )
 
         submitted = st.form_submit_button("追加する", use_container_width=True)
@@ -729,40 +749,36 @@ with tab_list:
                     col1, col2 = st.columns(2)
                     with col1:
                         st.markdown("**指定教科書**")
-                        required_book = html.escape(
-                            item["required_textbook"] or "未登録"
-                        )
-                        required_book_class = (
-                            "book-title-card"
-                            if item["required_textbook"]
-                            else "book-title-card is-empty"
-                        )
-                        st.markdown(
-                            f'<div class="{required_book_class}">{required_book}</div>',
-                            unsafe_allow_html=True,
-                        )
-                        clarity_col, frequency_col = st.columns(2, gap="small")
-                        with clarity_col:
-                            _render_book_rating(
+                        if item["required_textbook"]:
+                            required_book = html.escape(item["required_textbook"])
+                            st.markdown(
+                                f'<div class="book-title-card">{required_book}</div>',
+                                unsafe_allow_html=True,
+                            )
+                            clarity_col, frequency_col = st.columns(2, gap="small")
+                            with clarity_col:
+                                _render_book_rating(
+                                    item,
+                                    "required_textbook",
+                                    "book_clarity",
+                                    "わかりやすさ",
+                                    voter_id,
+                                )
+                            with frequency_col:
+                                _render_book_rating(
+                                    item,
+                                    "required_textbook",
+                                    "book_frequency",
+                                    "授業での使用頻度",
+                                    voter_id,
+                                )
+                            _render_book_reviews(
                                 item,
                                 "required_textbook",
-                                "book_clarity",
-                                "わかりやすさ",
-                                voter_id,
+                                item["required_textbook"],
                             )
-                        with frequency_col:
-                            _render_book_rating(
-                                item,
-                                "required_textbook",
-                                "book_frequency",
-                                "授業での使用頻度",
-                                voter_id,
-                            )
-                        _render_book_reviews(
-                            item,
-                            "required_textbook",
-                            item["required_textbook"] or "指定教科書（未登録）",
-                        )
+                        else:
+                            st.caption("指定教科書は未登録です")
 
                     with col2:
                         st.markdown("**市販参考書**")

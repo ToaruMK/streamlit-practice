@@ -233,7 +233,6 @@ def add_textbook(
         ("grade", "学年"),
         ("lecture_name", "授業名"),
         ("professor_name", "教授名"),
-        ("required_textbook", "指定教科書"),
     )
     missing = [label for key, label in required_fields if not record[key]]
     if missing:
@@ -362,7 +361,6 @@ def update_textbook(
             ("grade", "学年"),
             ("lecture_name", "授業名"),
             ("professor_name", "教授名"),
-            ("required_textbook", "指定教科書"),
         )
         missing = [label for key, label in required_fields if not updated_fields[key]]
         if missing:
