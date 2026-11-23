@@ -498,43 +498,68 @@ except (json.JSONDecodeError, OSError, ValueError) as error:
     textbooks = []
     st.error(f"教科書データを読み込めませんでした：{error}")
 
+professor_suggestions = sorted(
+    {item["professor_name"] for item in textbooks if item["professor_name"]}
+)
+lecture_suggestions = sorted(
+    {item["lecture_name"] for item in textbooks if item["lecture_name"]}
+)
+required_book_suggestions = sorted(
+    {item["required_textbook"] for item in textbooks if item["required_textbook"]}
+)
+reference_book_suggestions = sorted(
+    {item["reference_book"] for item in textbooks if item["reference_book"]}
+)
+
 tab_list, tab_add = st.tabs(["教科書一覧", "教科書を追加"])
 
 with tab_add:
     st.subheader("新しい情報を追加")
     st.caption("同じ授業名・教授名の登録がある場合は、既存情報に統合されます。")
-    department_text = st.text_input(
-        "学科（必須・カンマ区切り可）",
-        placeholder="例：教育,経済",
+    department = st.multiselect(
+        "学科（必須・複数選択可）",
+        DEPARTMENTS,
         key="add_department",
     )
-    grade_text = st.text_input(
-        "学年（必須・カンマ区切り可）",
-        placeholder="例：1年,2年",
+    grade = st.multiselect(
+        "学年（必須・複数選択可）",
+        GRADES,
         key="add_grade",
     )
-    lecture_name = st.text_input(
+    lecture_name = st.selectbox(
         "授業名（必須）",
-        placeholder="授業名を入力",
+        lecture_suggestions,
+        index=None,
+        accept_new_options=True,
+        placeholder="入力するか、候補から選択",
         key="add_lecture_name",
     )
-    professor_name = st.text_input(
+    professor_name = st.selectbox(
         "教授名（必須）",
-        placeholder="教授名を入力",
+        professor_suggestions,
+        index=None,
+        accept_new_options=True,
+        placeholder="入力するか、候補から選択",
         key="add_professor_name",
     )
 
     col1, col2 = st.columns(2)
     with col1:
-        required_textbook = st.text_input(
+        required_textbook = st.selectbox(
             "指定教科書名",
-            placeholder="指定教科書名を入力",
+            required_book_suggestions,
+            index=None,
+            accept_new_options=True,
+            placeholder="入力するか、候補から選択",
             key="add_required_textbook",
         )
     with col2:
-        reference_book = st.text_input(
+        reference_book = st.selectbox(
             "市販参考書",
-            placeholder="市販参考書を入力",
+            reference_book_suggestions,
+            index=None,
+            accept_new_options=True,
+            placeholder="入力するか、候補から選択",
             key="add_reference_book",
         )
 
@@ -588,16 +613,6 @@ with tab_add:
         )
 
     if st.button("追加する", use_container_width=True, key="add_textbook_button"):
-        department = [
-            value.strip()
-            for value in department_text.replace("、", ",").replace("，", ",").split(",")
-            if value.strip()
-        ]
-        grade = [
-            value.strip()
-            for value in grade_text.replace("、", ",").replace("，", ",").split(",")
-            if value.strip()
-        ]
         try:
             add_textbook(
                 lecture_name or "",
@@ -682,14 +697,22 @@ with tab_list:
                     if item["creator_id"] == voter_id:
                         with st.form(key=f"edit-form-{item['id']}"):
                             st.markdown("**登録情報を編集**")
-                            edited_departments_text = st.text_input(
-                                "学科（カンマ区切り可）",
-                                value=",".join(item["department"]),
+                            edited_departments = st.multiselect(
+                                "学科",
+                                DEPARTMENTS,
+                                default=[
+                                    department
+                                    for department in item["department"]
+                                    if department in DEPARTMENTS
+                                ],
                                 key=f"edit-department-{item['id']}",
                             )
-                            edited_grades_text = st.text_input(
-                                "学年（カンマ区切り可）",
-                                value=",".join(item["grade"]),
+                            edited_grades = st.multiselect(
+                                "学年",
+                                GRADES,
+                                default=[
+                                    grade for grade in item["grade"] if grade in GRADES
+                                ],
                                 key=f"edit-grade-{item['id']}",
                             )
                             edited_lecture_name = st.text_input(
@@ -717,22 +740,6 @@ with tab_list:
                                 use_container_width=True,
                             ):
                                 try:
-                                    edited_departments = [
-                                        value.strip()
-                                        for value in edited_departments_text
-                                        .replace("、", ",")
-                                        .replace("，", ",")
-                                        .split(",")
-                                        if value.strip()
-                                    ]
-                                    edited_grades = [
-                                        value.strip()
-                                        for value in edited_grades_text
-                                        .replace("、", ",")
-                                        .replace("，", ",")
-                                        .split(",")
-                                        if value.strip()
-                                    ]
                                     update_textbook(
                                         item["id"],
                                         voter_id,
